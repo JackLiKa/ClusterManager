@@ -162,9 +162,23 @@ public class PseudoClusterProvider implements IClusterProvider {
         ManagedPseudoNode producerNode = requireNode(scenario.producerNodeId());
         boolean hostBackedFlow = producerNode.hostBound() || consumerNodeIds.stream().map(this::requireNode).anyMatch(ManagedPseudoNode::hostBound);
         if (hostBackedFlow) {
+            // P0 修复: 预检 HOST NameServer 是否存在，缺失时返回失败结果而非抛 IllegalStateException 导致 HTTP 500
+            String hostNameServer = resolveHostNameServersOrNull();
+            if (hostNameServer == null) {
+                List<MessageDeliveryResult> failedDeliveries = consumerNodeIds.stream()
+                        .map(consumerNodeId -> new MessageDeliveryResult(
+                                "host-ns-missing",
+                                scenario.producerNodeId(),
+                                consumerNodeId,
+                                false,
+                                "Host RocketMQ bridge disabled: no HOST nameserver registered in pseudo cluster"
+                        ))
+                        .toList();
+                return new MessageSimulationResult(Instant.now(), failedDeliveries);
+            }
             return new MessageSimulationResult(
                     Instant.now(),
-                    rocketMqBridge.simulateWithHostRocketMq(resolveHostNameServers(), scenario, consumerNodeIds)
+                    rocketMqBridge.simulateWithHostRocketMq(hostNameServer, scenario, consumerNodeIds)
             );
         }
         for (int index = 0; index < scenario.messageCount(); index++) {
@@ -255,7 +269,10 @@ public class PseudoClusterProvider implements IClusterProvider {
     }
 
     private void seedNode(String nodeId, String displayName, String hostName, String role, int port) {
-        ManagedPseudoNode node = new ManagedPseudoNode(nodeId, displayName, hostName, role, port, false, "VIRTUAL", NodeStatus.STARTING);
+        // P2 修复: 种子节点初始状态改为 STOPPED，与默认 auto-start=false 语义一致
+        // 原代码为 NodeStatus.STARTING，会在首次 loadMetrics 时被 nodeRuntime.status() 覆盖为 STOPPED，导致前端状态闪烁
+        // ManagedPseudoNode node = new ManagedPseudoNode(nodeId, displayName, hostName, role, port, false, "VIRTUAL", NodeStatus.STARTING);
+        ManagedPseudoNode node = new ManagedPseudoNode(nodeId, displayName, hostName, role, port, false, "VIRTUAL", NodeStatus.STOPPED);
         String virtualIp = virtualNetwork.attachNode(properties.clusterId(), nodeId).virtualIp();
         virtualNetwork.isolateNode(properties.clusterId(), nodeId);
         node.bindAddress(virtualIp);
@@ -358,5 +375,15 @@ public class PseudoClusterProvider implements IClusterProvider {
                 .orElseThrow(() -> new IllegalStateException(
                         "Host-backed message simulation requires at least one HOST nameserver node in the pseudo cluster"
                 ));
+    }
+
+    // P0 修复: 新增非抛异常版本，供 simulate 预检使用，避免触发 HTTP 500
+    private String resolveHostNameServersOrNull() {
+        return orderedNodes().stream()
+                .filter(ManagedPseudoNode::hostBound)
+                .filter(node -> "nameserver".equals(node.role()))
+                .map(ManagedPseudoNode::address)
+                .findFirst()
+                .orElse(null);
     }
 }

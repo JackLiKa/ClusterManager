@@ -61,7 +61,16 @@ async function submit(): Promise<void> {
     })
     deliveries.value = result.deliveries
     const successCount = result.deliveries.filter(delivery => delivery.success).length
-    ElMessage.success(`Validated ${result.deliveries.length} messages, ${successCount} succeeded.`)
+    // P0 修复: 部分失败时给出明确提示，避免用户误以为全部成功
+    if (successCount === 0 && result.deliveries.length > 0) {
+      ElMessage.warning(`Validation returned ${result.deliveries.length} results, all failed. Check delivery details.`)
+    } else {
+      ElMessage.success(`Validated ${result.deliveries.length} messages, ${successCount} succeeded.`)
+    }
+  } catch (error) {
+    // P0 修复: 捕获后端异常，给出用户可见错误提示，避免 promise rejection 静默失败
+    const message = error instanceof Error ? error.message : 'Message simulation failed'
+    ElMessage.error(message)
   } finally {
     running.value = false
   }

@@ -15,6 +15,19 @@ const api = axios.create({
   baseURL: '/api'
 })
 
+// P0 修复: 统一拦截后端错误响应，把 ApiExceptionHandler 返回的 message 字段抛给调用方
+// 避免前端 catch 只拿到 "Request failed with status code 500" 这类无意义信息
+api.interceptors.response.use(
+  response => response,
+  error => {
+    const backendMessage = error?.response?.data?.message
+    if (backendMessage) {
+      return Promise.reject(new Error(backendMessage))
+    }
+    return Promise.reject(error)
+  }
+)
+
 function pathOf(selection: ClusterSelection): string {
   return `/clusters/${selection.mode.toLowerCase()}/${selection.middleware.toLowerCase()}/${selection.clusterId}`
 }

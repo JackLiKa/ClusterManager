@@ -19,6 +19,16 @@ public class ApiExceptionHandler {
         );
     }
 
+    // P0 修复: 兜底处理 IllegalStateException，避免未捕获异常导致 HTTP 500 且前端无提示
+    @ExceptionHandler(IllegalStateException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public Map<String, Object> handleIllegalState(IllegalStateException exception) {
+        return Map.of(
+                "error", "CONFLICT",
+                "message", exception.getMessage()
+        );
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Map<String, Object> handleValidation(MethodArgumentNotValidException exception) {

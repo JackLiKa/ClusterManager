@@ -81,7 +81,14 @@ public class RocketMqClusterProvider implements IClusterProvider {
             return new OperationResult(nodeId, operationType, true, "Manual RocketMQ service updated");
         }
         adminAdapter.invokeNodeOperation(nodeId, operationType.name());
-        return new OperationResult(nodeId, operationType, true, "Delegated to RocketMQ Admin API");
+        // P1 修复: admin 节点操作改用带返回值的入口，失败时如实返回 success=false
+        boolean delegated = adminAdapter.tryInvokeNodeOperation(nodeId, operationType.name());
+        return new OperationResult(
+                nodeId,
+                operationType,
+                delegated,
+                delegated ? "Delegated to RocketMQ Admin API" : "RocketMQ Admin API operation failed for " + nodeId
+        );
     }
 
     @Override
@@ -89,10 +96,19 @@ public class RocketMqClusterProvider implements IClusterProvider {
         if (manualNodes.containsKey(registration.nodeId())) {
             throw new IllegalArgumentException("Node already exists: " + registration.nodeId());
         }
+        // P3 修复: 真实集群手工登记补 port 范围校验，与伪集群 validatePseudoRegistration 保持一致
+        if (registration.port() == null || registration.port() <= 0 || registration.port() > 65535) {
+            throw new IllegalArgumentException("Port must be between 1 and 65535");
+        }
+        if (registration.address() == null || registration.address().isBlank()) {
+            throw new IllegalArgumentException("Address is required");
+        }
         Map<String, String> labels = new java.util.HashMap<>(registration.labels() == null ? Map.of() : registration.labels());
         labels.putIfAbsent("role", registration.role());
         labels.put("source", "manual");
         labels.put("nameserver", registration.address());
+        // P1 修复: 真实集群手工登记的节点都是真实物理节点，统一标记 nodeKind=HOST，避免前端误显示为 VIRTUAL
+        labels.putIfAbsent("nodeKind", "HOST");
         manualNodes.put(registration.nodeId(), new ClusterNode(
                 registration.nodeId(),
                 registration.displayName(),

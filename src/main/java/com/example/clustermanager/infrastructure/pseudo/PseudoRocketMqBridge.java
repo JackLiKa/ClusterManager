@@ -51,7 +51,11 @@ public class PseudoRocketMqBridge {
         producer.setNamesrvAddr(namesrvAddr);
         producer.start();
 
-        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(scenario.consumerGroup());
+        // P3 修复: consumer group 追加唯一后缀，避免上一次 consumer 未完全 shutdown 时
+        // RocketMQ 抛 "the consumer group has been created already" 导致连续第二次模拟失败
+        // DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(scenario.consumerGroup());
+        String uniqueConsumerGroup = scenario.consumerGroup() + "-" + java.util.UUID.randomUUID().toString().substring(0, 8);
+        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(uniqueConsumerGroup);
         consumer.setNamesrvAddr(namesrvAddr);
         consumer.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_LAST_OFFSET);
         consumer.subscribe(scenario.topic(), "*");

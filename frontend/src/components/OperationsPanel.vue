@@ -35,7 +35,11 @@ const serviceForm = reactive({
 })
 
 const summary = computed(() => {
-  const items = props.metrics?.nodes ?? []
+  // P3 修复: HOST 节点 metrics 后端返回 0，会拉低平均值；先按 nodeId 找出非 HOST 节点再统计
+  const hostNodeIds = new Set(
+    props.nodes.filter(node => node.labels.nodeKind === 'HOST').map(node => node.nodeId)
+  )
+  const items = (props.metrics?.nodes ?? []).filter(item => !hostNodeIds.has(item.nodeId))
   if (items.length === 0) {
     return { cpu: '0.0', memory: '0.0', netIn: '0', netOut: '0' }
   }
@@ -242,6 +246,10 @@ function generateNodeId(role: string, host: string, port: number): string {
           <strong class="metric-value metric-value-small">{{ summary.netOut }}</strong>
         </div>
       </div>
+      <!-- P3 修复: 真实集群 metrics 来自 MockRocketMqAdminClient 的随机数，标注 mock 避免用户误判 -->
+      <div v-if="props.cluster.mode === 'REAL'" class="helper-note helper-note-inline" style="margin-top: 8px">
+        Real cluster metrics are mock placeholders, not live runtime values from RocketMQ.
+      </div>
 
       <el-table :data="nodes" style="margin-top: 16px" height="320">
         <el-table-column prop="displayName" label="Service" min-width="168" />
@@ -253,7 +261,7 @@ function generateNodeId(role: string, host: string, port: number): string {
         </el-table-column>
         <el-table-column label="Kind" min-width="110">
           <template #default="{ row }">
-            {{ row.labels.nodeKind ?? 'VIRTUAL' }}
+            {{ row.labels.nodeKind ?? (props.cluster.mode === 'REAL' ? 'PHYSICAL' : 'VIRTUAL') }}
           </template>
         </el-table-column>
         <el-table-column label="Status" min-width="110">

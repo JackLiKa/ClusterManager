@@ -94,4 +94,14 @@ public class RocketMqAdminAdapter {
     public void invokeNodeOperation(String nodeId, String operation) {
         adminClient.invokeBrokerLifecycle(nodeId, operation);
     }
+
+    // P1 修复: 新增带返回值的操作入口，避免 operateNode 在 admin 调用失败时仍返回 success=true
+    public boolean tryInvokeNodeOperation(String nodeId, String operation) {
+        try {
+            adminClient.invokeBrokerLifecycle(nodeId, operation);
+            return true;
+        } catch (Exception exception) {
+            return false;
+        }
+    }
 }
