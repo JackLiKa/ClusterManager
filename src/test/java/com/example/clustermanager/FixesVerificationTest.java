@@ -15,6 +15,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 
 /**
  * 针对本次修复行为的验证测试：
@@ -23,6 +24,7 @@ import org.springframework.boot.test.context.SpringBootTest;
  * - P3-H: 真实集群 port 非法时抛 IllegalArgumentException
  */
 @SpringBootTest
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class FixesVerificationTest {
 
     @Autowired

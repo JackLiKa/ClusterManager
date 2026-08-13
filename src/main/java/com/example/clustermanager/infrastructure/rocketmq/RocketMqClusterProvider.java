@@ -80,7 +80,6 @@ public class RocketMqClusterProvider implements IClusterProvider {
             manualNodes.put(nodeId, updated);
             return new OperationResult(nodeId, operationType, true, "Manual RocketMQ service updated");
         }
-        adminAdapter.invokeNodeOperation(nodeId, operationType.name());
         // P1 修复: admin 节点操作改用带返回值的入口，失败时如实返回 success=false
         boolean delegated = adminAdapter.tryInvokeNodeOperation(nodeId, operationType.name());
         return new OperationResult(

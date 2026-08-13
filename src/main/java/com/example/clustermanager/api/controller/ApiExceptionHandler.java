@@ -37,4 +37,13 @@ public class ApiExceptionHandler {
                 "message", exception.getMessage()
         );
     }
+
+    @ExceptionHandler(Exception.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public Map<String, Object> handleGeneric(Exception exception) {
+        return Map.of(
+                "error", "INTERNAL_SERVER_ERROR",
+                "message", "An unexpected error occurred"
+        );
+    }
 }
