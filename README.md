@@ -1,62 +1,127 @@
 # Cluster Manager
 
-统一管理本地伪集群、宿主 RocketMQ 节点与真实 RocketMQ 集群的 Spring Boot + Vue 3 控制台。
+[![CI](https://github.com/JackLiKa/ClusterManager/actions/workflows/ci.yml/badge.svg)](https://github.com/JackLiKa/ClusterManager/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Java](https://img.shields.io/badge/Java-17-blue.svg)](https://openjdk.org/projects/jdk/17/)
+[![Vue](https://img.shields.io/badge/Vue-3-42b883.svg)](https://vuejs.org/)
+[![RocketMQ](https://img.shields.io/badge/RocketMQ-4.9.8-D77310.svg)](https://rocketmq.apache.org/)
 
-## 当前能力
+A Spring Boot + Vue 3 console for managing local pseudo clusters and real RocketMQ nodes.
 
-- 统一抽象 `PSEUDO` 与 `REAL` 两种集群模式。
-- 支持 RocketMQ 拓扑展示、节点启停、监控、日志和消息模拟。
-- 支持在伪集群与真实集群模式下手工添加、删除服务。
-- 支持录入虚拟 IP、真实 IP、NameServer、角色、主机名、端口等服务信息。
-- 伪集群模式支持同时接入宿主 `HOST` 节点和 TAP `VIRTUAL` 节点。
-- 宿主节点可通过真实 RocketMQ 参与消息收发验证。
-- 开发模式和打包模式下都可以直接访问 `http://localhost:8080`。
+Cluster Manager unifies `PSEUDO` and `REAL` cluster modes in one web UI: you can visualize topology, start/stop nodes, stream logs and metrics, simulate message flows, and register manual services side by side with virtual TAP nodes.
 
-## 运行方式
+![Cluster Manager Screenshot](docs/images/screenshot.png)
 
-开发模式：
+> [中文文档](docs/zh/README.md) | [Architecture](docs/ARCHITECTURE.md) | [Contributing](docs/CONTRIBUTING.md)
+
+## Features
+
+- **Unified cluster abstraction** — switch between `PSEUDO` and `REAL` modes from the top navigation.
+- **RocketMQ topology** — visualize NameServer, Broker Master, Broker Slave, and Proxy nodes with ECharts.
+- **Node lifecycle** — start, stop, restart, and delete services directly from the operations panel.
+- **Manual service registry** — register real IP / NameServer entries or virtual IPs for mixed clusters.
+- **Host + virtual nodes** — in pseudo mode, mix local `HOST` RocketMQ nodes with `VIRTUAL` TAP nodes.
+- **Message workbench** — simulate produce/consume flows; host-backed nodes validate against a real RocketMQ instance.
+- **Live telemetry** — WebSocket streams push metrics and logs to the dashboard.
+- **Single runnable artifact** — `mvn spring-boot:run` builds the frontend and serves the SPA on `http://localhost:8080`.
+
+## Quick Start
+
+### Prerequisites
+
+- Java 17
+- Node.js 20+ and npm
+- (Optional) A local RocketMQ NameServer + Broker if you want to validate host-backed message flow
+
+### Run in development mode
+
+```powershell
+# On Windows
+.\mvnw.cmd spring-boot:run
+
+# On macOS / Linux
+./mvnw spring-boot:run
+```
+
+Then open `http://localhost:8080/`.
+
+The Maven build will automatically compile the Vue frontend and copy it into `target/classes/static`, so the full UI is available at the backend port.
+
+### Run with frontend hot reload
 
 ```powershell
 cd frontend
 npm install
-cd ..
-mvn -s .mvn/local-settings.xml -gs .mvn/local-settings.xml spring-boot:run
+npm run dev
 ```
 
-说明：
+The Vite dev server runs on `http://localhost:5173` and proxies `/api`, `/ws`, and `/guide` to `http://localhost:8080`.
 
-- `spring-boot:run` 现在会先构建前端并复制到 `target/classes/static`。
-- 因此后端启动后，直接访问 `http://localhost:8080/` 就能打开完整页面。
-- 如果需要前端热更新，仍可额外执行 `cd frontend && npm run dev`，访问 `http://localhost:5173`。
-
-打包运行：
+### Build and run the fat JAR
 
 ```powershell
-mvn -s .mvn/local-settings.xml -gs .mvn/local-settings.xml package
-java -jar target\cluster-manager-0.0.1-SNAPSHOT.jar
+# Windows
+.\mvnw.cmd clean package
+java -jar target\cluster-manager-0.1.0-SNAPSHOT.jar
+
+# macOS / Linux
+./mvnw clean package
+java -jar target/cluster-manager-0.1.0-SNAPSHOT.jar
 ```
 
-## 手工服务管理
+## Configuration
 
-运维面板已支持：
+Key properties in `src/main/resources/application.properties`:
 
-- 添加 NameServer、Broker Master、Broker Slave、Proxy 等服务
-- 删除手工登记的服务
-- 在伪集群下指定宿主地址或虚拟 IP
-- 在真实集群下指定真实 IP / NameServer 地址
-- 新增服务后自动纳入拓扑图、监控表、日志流与 RocketMQ 消息模拟
+| Property | Default | Description |
+| --- | --- | --- |
+| `server.port` | `8080` | HTTP port for the backend and SPA. |
+| `cluster.pseudo.cluster-id` | `local-lab` | Identifier for the pseudo cluster. |
+| `cluster.pseudo.cidr` | `10.77.0.0/24` | Virtual network CIDR for TAP nodes. |
+| `cluster.pseudo.auto-start` | `false` | Whether to start seeded pseudo nodes automatically. |
+| `cluster.pseudo.work-dir` | `run/pseudo-cluster` | Working directory for pseudo node runtime. |
+| `cluster.rocketmq.cluster-id` | `rocketmq-demo` | Identifier for the real cluster view. |
+| `cluster.rocketmq.name-servers` | `192.168.50.78:9876` | NameServer list for host-backed message validation. |
+| `cluster.stream.publish-interval-ms` | `5000` | Metrics/log WebSocket push interval. |
 
-说明：
+## Architecture
 
-- 伪集群默认内置的种子节点不能删除。
-- 若要让伪集群通过真实 RocketMQ 收发消息，需至少登记一个 `HOST` 类型的 NameServer。
-- 真实集群当前仍基于 `MockRocketMqAdminClient`，手工添加的服务会以“可模拟、可展示、可操作”的方式参与控制台流程。
+The backend follows a hexagonal architecture:
 
-## 关键文件
+- `core` — domain models and stable ports (`IClusterProvider`, `IVirtualNetwork`, `IServiceRegistry`, ...).
+- `application` — provider selection (`ClusterProviderRegistry`) and orchestration (`ClusterFacadeService`).
+- `infrastructure` — provider implementations for pseudo clusters and RocketMQ.
+- `api` — REST controllers, DTOs, WebSocket config, and SPA forwarding.
 
-- `src/main/java/com/example/clustermanager/api/controller/ClusterController.java`
-- `src/main/java/com/example/clustermanager/core/port/IClusterProvider.java`
-- `src/main/java/com/example/clustermanager/infrastructure/pseudo/PseudoClusterProvider.java`
-- `src/main/java/com/example/clustermanager/infrastructure/rocketmq/RocketMqClusterProvider.java`
-- `frontend/src/components/ClusterTopologyCard.vue`
-- `frontend/src/components/OperationsPanel.vue`
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full layout and design notes.
+
+## Testing
+
+```powershell
+# Run backend tests
+.\mvnw.cmd clean test
+
+# Run frontend type-check and build
+cd frontend
+npm run build
+```
+
+## Contributing
+
+We welcome contributions! Please read [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for branch naming, commit style, and the pull request process.
+
+## Security
+
+If you discover a security vulnerability, please follow the instructions in [docs/SECURITY.md](docs/SECURITY.md) to report it privately.
+
+## License
+
+Cluster Manager is licensed under the [Apache License 2.0](LICENSE).
+
+## Acknowledgments
+
+- [Spring Boot](https://spring.io/projects/spring-boot)
+- [Vue.js](https://vuejs.org/)
+- [Element Plus](https://element-plus.org/)
+- [ECharts](https://echarts.apache.org/)
+- [Apache RocketMQ](https://rocketmq.apache.org/)
