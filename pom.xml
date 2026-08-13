@@ -8,24 +8,41 @@
         <version>4.1.0</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>com.example</groupId>
+    <groupId>io.github.jacklika</groupId>
     <artifactId>cluster-manager</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
-    <name>ClusterManager</name>
-    <description>ClusterManager</description>
-    <url/>
+    <version>0.1.0-SNAPSHOT</version>
+    <name>Cluster Manager</name>
+    <description>Spring Boot + Vue 3 console for managing local pseudo clusters and RocketMQ nodes.</description>
+    <url>https://github.com/JackLiKa/ClusterManager</url>
+    <inceptionYear>2026</inceptionYear>
+
     <licenses>
-        <license/>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
     </licenses>
+
     <developers>
-        <developer/>
+        <developer>
+            <id>JackLiKa</id>
+            <name>JackLiKa</name>
+            <url>https://github.com/JackLiKa</url>
+        </developer>
     </developers>
+
     <scm>
-        <connection/>
-        <developerConnection/>
-        <tag/>
-        <url/>
+        <connection>scm:git:git://github.com/JackLiKa/ClusterManager.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/JackLiKa/ClusterManager.git</developerConnection>
+        <tag>HEAD</tag>
+        <url>https://github.com/JackLiKa/ClusterManager/tree/main</url>
     </scm>
+
+    <issueManagement>
+        <system>GitHub Issues</system>
+        <url>https://github.com/JackLiKa/ClusterManager/issues</url>
+    </issueManagement>
     <properties>
         <java.version>17</java.version>
         <frontend.workingDirectory>frontend</frontend.workingDirectory>
@@ -149,7 +166,7 @@
                                     <directory>${project.basedir}/${frontend.workingDirectory}/dist</directory>
                                 </resource>
                                 <resource>
-                                    <directory>${project.basedir}</directory>
+                                    <directory>${project.basedir}/docs/zh</directory>
                                     <includes>
                                         <include>manual.md</include>
                                     </includes>
@@ -171,7 +188,7 @@
                                     <directory>${project.basedir}/${frontend.workingDirectory}/dist</directory>
                                 </resource>
                                 <resource>
-                                    <directory>${project.basedir}</directory>
+                                    <directory>${project.basedir}/docs/zh</directory>
                                     <includes>
                                         <include>manual.md</include>
                                     </includes>

@@ -5,6 +5,17 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+# Local working copy artifact from previous nested layout
+ClusterManager/
+
+# Environment and OS files
+.env
+.env.local
+.DS_Store
+Thumbs.db
+*.log
+logs/
+
 ### STS ###
 .apt_generated
 .classpath
