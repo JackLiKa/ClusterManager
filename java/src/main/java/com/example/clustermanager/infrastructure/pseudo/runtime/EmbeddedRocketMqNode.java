@@ -109,6 +109,7 @@ final class EmbeddedRocketMqNode {
                     spec.nodeId(), spec.role(), spec.listenPort());
         } catch (Exception exception) {
             status = NodeStatus.FAILED;
+            log.error("Embedded node {} failed to start: {}", spec.nodeId(), exception.getMessage(), exception);
             throw new IllegalStateException("Failed to start embedded node: " + spec.nodeId(), exception);
         }
     }
@@ -124,6 +125,10 @@ final class EmbeddedRocketMqNode {
             } else if (controller instanceof BrokerController broker) {
                 broker.shutdown();
             }
+            // 等待 shutdown 完成——BrokerController.shutdown() 是異步的，
+            // 立即返回時線程池可能仍在終止、文件句柄可能仍未釋放。
+            // 不等待會導致後續 start 時 store lock 文件無法刪除。
+            Thread.sleep(1000);
             log.info("Embedded node {} stopped", spec.nodeId());
         } catch (Exception exception) {
             log.warn("Embedded node {} shutdown error: {}", spec.nodeId(), exception.getMessage());

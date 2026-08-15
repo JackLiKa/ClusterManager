@@ -104,6 +104,17 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <!-- RocketMQ 4.9.8 在 Java 17 上需要打開 java.nio 模塊以釋放 DirectByteBuffer -->
+                    <!-- 沒有這些參數，Broker.shutdown() 會拋 InaccessibleObjectException， -->
+                    <!-- 導致 store lock 文件無法刪除，重啟時 Broker 無法啟動 -->
+                    <jvmArguments>
+                        --add-opens java.base/java.nio=ALL-UNNAMED
+                        --add-opens java.base/java.lang.reflect=ALL-UNNAMED
+                        --add-opens java.base/sun.nio.ch=ALL-UNNAMED
+                        --add-exports java.base/jdk.internal.ref=ALL-UNNAMED
+                    </jvmArguments>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

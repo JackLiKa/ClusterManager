@@ -155,8 +155,8 @@ page.tsx → components → hooks → lib/api.ts → 後端 REST/STOMP
 
 - ✅ Provider 列表加載
 - ✅ 集群拓撲展示（3 節點：狀態着色 灰/綠/紅/黃 + 角色定形狀 圓/矩形/菱形 + 拖拽 + 圖例）
-- ✅ 節點啟動/停止/重啟（嵌入式真實 RocketMQ）
-- ✅ 消息 produce/consume 模擬（真實 RocketMQ 投遞，30/30 成功）
+- ✅ 節點啟動/停止/重啟（嵌入式真實 RocketMQ，含 JVM `--add-opens` 修復 shutdown 異常）
+- ✅ 消息 produce/consume 模擬（真實 RocketMQ 投遞，3/3 成功）
 - ✅ 消息模板系統（6 預定義模板 + 占位符替換 `{index}`/`{timestamp}`/`{uuid}`/`{random}`/`{topic}`）
 - ✅ 外部 MQ 通信（PSEUDO HOST 路徑 + REAL 模式真實 produce/consume）
 - ✅ 網頁連接配置面板（NameServer + 超時 + 消費者組前綴，持久化到文件，立即生效）
@@ -164,8 +164,9 @@ page.tsx → components → hooks → lib/api.ts → 後端 REST/STOMP
 - ✅ 活動日誌（審計日誌 + 實時 STOMP 推送）
 - ✅ 主從複製（Master + Slave 同時運行）
 - ✅ 後端測試套件（128 tests pass, 2 skipped）
-- ✅ 前端 typecheck + ESLint 通過
+- ✅ 前端 typecheck + ESLint + build 通過
 - ✅ 手動節點登記（HOST + VIRTUAL）
+- ✅ 前端重試機制（後端未就緒時自動重試 + 錯誤重試按鈕）
 
 ## 8. 監控指標語義
 
@@ -216,3 +217,5 @@ page.tsx → components → hooks → lib/api.ts → 後端 REST/STOMP
 - **外部 MQ 通信三層後備**：PSEUDO HOST 路徑按優先級查找 NameServer 地址——登記的 HOST 節點 > 運行時 UI 配置 > 啟動環境變量。
 - **運行時配置持久化**：UI 配置保存到 `run/rocketmq-connection.properties`，啟動時自動加載，立即生效無需重啟。
 - **RealRocketMqAdminClient 條件啟用**：`@ConditionalOnProperty(prefix="cluster.rocketmq", name="name-servers")`，配置了 NameServer 地址時自動替代 MockRocketMqAdminClient。
+- **JVM `--add-opens` 參數**：`spring-boot-maven-plugin` 配置了 `--add-opens java.base/java.nio=ALL-UNNAMED` 等 JVM 參數，確保 RocketMQ 4.9.8 在 Java 17 上 `Broker.shutdown()` 時能反射訪問 `DirectByteBuffer.attachment()` 釋放內存映射文件。沒有這些參數，shutdown 會拋 `InaccessibleObjectException`，導致 store lock 文件無法刪除，重啟時 Broker 無法啟動。
+- **Broker 重啟延遲**：`EmbeddedRocketMqRuntime.restart()` 在 stop 後等待 1.5 秒再 start，`EmbeddedRocketMqNode.stop()` 在 shutdown 後等待 1 秒確保線程池終止和文件句柄釋放。不等待會導致端口衝突或 store lock 文件佔用。

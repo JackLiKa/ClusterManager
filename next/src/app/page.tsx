@@ -17,6 +17,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react'
+import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
@@ -52,6 +53,8 @@ export default function ClusterOverviewPage() {
   const [logs, setLogs] = useState<LogEntry[]>([])
   // 加載狀態
   const [loading, setLoading] = useState(true)
+  // 加載錯誤狀態（後端不可達時顯示重試按鈕）
+  const [loadError, setLoadError] = useState(false)
 
   /** 刷新拓撲數據（供子組件調用） */
   const refreshTopology = useCallback(async () => {
@@ -64,8 +67,12 @@ export default function ClusterOverviewPage() {
     }
   }, [selection])
 
-  // 首次加載：獲取 provider 列表並選擇默認集群
+  // 首次加載：獲取 provider 列表並選擇默認集群（帶重試機制）
   useEffect(() => {
+    let retryCount = 0
+    const maxRetries = 10
+    let timer: ReturnType<typeof setTimeout>
+
     async function init() {
       try {
         const list = await fetchProviders()
@@ -82,13 +89,21 @@ export default function ClusterOverviewPage() {
             middleware: first.middleware,
           })
         }
-      } catch {
-        // 加載失敗時靜默處理
-      } finally {
         setLoading(false)
+      } catch {
+        // 後端可能尚未就緒，自動重試
+        retryCount++
+        if (retryCount < maxRetries) {
+          timer = setTimeout(() => void init(), 2000)
+        } else {
+          // 超過重試次數，顯示錯誤狀態
+          setLoadError(true)
+          setLoading(false)
+        }
       }
     }
-    init()
+    void init()
+    return () => clearTimeout(timer)
   }, [])
 
   // selection 變化時加載全部數據
@@ -161,6 +176,23 @@ export default function ClusterOverviewPage() {
     return (
       <div className="flex h-[60vh] items-center justify-center text-muted-foreground">
         加載中...
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex h-[60vh] flex-col items-center justify-center gap-4 text-muted-foreground">
+        <p>無法連接到後端服務，請確認後端已啟動（端口 8088）。</p>
+        <Button
+          onClick={() => {
+            setLoadError(false)
+            setLoading(true)
+            window.location.reload()
+          }}
+        >
+          重新加載
+        </Button>
       </div>
     )
   }

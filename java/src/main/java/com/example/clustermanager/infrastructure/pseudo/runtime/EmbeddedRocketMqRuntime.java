@@ -179,6 +179,13 @@ public class EmbeddedRocketMqRuntime {
      */
     public synchronized void restart(ManagedNode node) {
         stop(node.nodeId());
+        // 等待 Broker 完全關閉——shutdown() 是異步的，端口釋放和線程池終止需要時間
+        // 不等待會導致重啟時端口衝突或 "Address already in use" 錯誤
+        try {
+            Thread.sleep(1500);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
         start(node);
     }
 

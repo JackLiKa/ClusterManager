@@ -30,3 +30,10 @@ logs/
 # Runtime
 java/run/
 .devin/
+
+# Playwright MCP artifacts
+.playwright-mcp/
+
+# Temporary screenshots
+topology-check.png
+topology-fixed.png

@@ -238,8 +238,8 @@ This project is licensed under the **Apache License 2.0** — see [LICENSE](LICE
 
 本项目同时提供中文文档：
 
-- **[架构文档（中文）](docs/ARCHITECTURE.md)** — 六边形架构、前后端分离、嵌入式 RocketMQ 详解
-- **[贡献指南（中文）](CONTRIBUTING.md)** — 如何参与开发、提交 PR
+- **[架构文档（中文）](docs/zh/ARCHITECTURE.zh.md)** — 六边形架构、前后端分离、嵌入式 RocketMQ 详解
+- **[贡献指南（中文）](docs/zh/CONTRIBUTING.zh.md)** — 如何参与开发、提交 PR
 
 ---
 

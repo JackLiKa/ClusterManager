@@ -68,28 +68,22 @@ const ROLE_LABELS: Record<string, string> = {
 export function ClusterTopologyCard({ topology }: ClusterTopologyCardProps) {
   const chartRef = useRef<HTMLDivElement>(null)
   const chartInstanceRef = useRef<echarts.ECharts | null>(null)
+  const resizeObserverRef = useRef<ResizeObserver | null>(null)
 
   useEffect(() => {
-    if (!chartRef.current) return
+    // chart div 只有在 topology 有節點時才渲染到 DOM
+    // 所以這裡在 topology 變化時檢查並初始化 ECharts
+    if (!chartRef.current || !topology || topology.nodes.length === 0) return
 
-    // 初始化 ECharts 實例
-    const chart = echarts.init(chartRef.current)
-    chartInstanceRef.current = chart
+    // 如果還沒初始化 ECharts 實例，則初始化
+    if (!chartInstanceRef.current) {
+      const chart = echarts.init(chartRef.current)
+      chartInstanceRef.current = chart
 
-    // ResizeObserver 監聽容器尺寸變化
-    const resizeObserver = new ResizeObserver(() => chart.resize())
-    resizeObserver.observe(chartRef.current)
-
-    // 清理函數：銷毀 ECharts 實例和 ResizeObserver
-    return () => {
-      resizeObserver.disconnect()
-      chart.dispose()
-      chartInstanceRef.current = null
+      const resizeObserver = new ResizeObserver(() => chart.resize())
+      resizeObserver.observe(chartRef.current)
+      resizeObserverRef.current = resizeObserver
     }
-  }, [])
-
-  useEffect(() => {
-    if (!chartInstanceRef.current || !topology) return
 
     // 構建 ECharts 節點數據——狀態著色 + 角色定形狀
     const nodes = topology.nodes.map((node) => {
@@ -175,6 +169,16 @@ export function ClusterTopologyCard({ topology }: ClusterTopologyCardProps) {
       ],
     })
   }, [topology])
+
+  // 清理函數：組件卸載時銷毀 ECharts 實例和 ResizeObserver
+  useEffect(() => {
+    return () => {
+      resizeObserverRef.current?.disconnect()
+      chartInstanceRef.current?.dispose()
+      chartInstanceRef.current = null
+      resizeObserverRef.current = null
+    }
+  }, [])
 
   return (
     <Card>
