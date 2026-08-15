@@ -111,7 +111,7 @@ api → application → core ← infrastructure
 page.tsx → components → hooks → lib/api.ts → 後端 REST/STOMP
 ```
 - `page.tsx`：主儀表盤，持有集群選擇狀態，組合子組件
-- `components/`：拓撲圖（ECharts + 圖例）、消息工作台、操作面板、監控指標卡
+- `components/`：拓撲圖（ECharts + 圖例）、消息工作台（含模板選擇器）、連接配置面板、操作面板、監控指標卡
 - `hooks/use-cluster-streams.ts`：STOMP/SockJS 實時流訂閱
 - `lib/api.ts`：統一 axios 客戶端 + 類型化端點函數
 
@@ -141,16 +141,29 @@ page.tsx → components → hooks → lib/api.ts → 後端 REST/STOMP
 | --- | --- | --- |
 | `allowedDevOrigins` | `['127.0.0.1']` | 允許的開發預覽源 |
 
+### 運行時連接配置（UI 可修改，持久化到 `run/rocketmq-connection.properties`）
+| 項目 | 默認值 | 範圍 | 備註 |
+| --- | --- | --- | --- |
+| `name-servers` | 繼承啟動配置 | 任意地址列表 | NameServer 地址（逗號分隔），空時 PSEUDO 用嵌入式集群 |
+| `send-msg-timeout-ms` | `10000` | 1000-600000 | 發送超時（毫秒） |
+| `consume-timeout-seconds` | `15` | 1-300 | 消費超時（秒） |
+| `consumer-group-prefix` | `mqcluster` | 非空字符串 | 消費者組前綴 |
+
+> UI 配置保存後立即生效，持久化到文件，重啟後保留。API：`GET/PUT /api/clusters/settings/rocketmq`
+
 ## 7. 已驗證功能
 
 - ✅ Provider 列表加載
 - ✅ 集群拓撲展示（3 節點：NameServer + Master + Slave + 圖例）
 - ✅ 節點啟動/停止/重啟（嵌入式真實 RocketMQ）
 - ✅ 消息 produce/consume 模擬（真實 RocketMQ 投遞，30/30 成功）
+- ✅ 消息模板系統（6 預定義模板 + 占位符替換 `{index}`/`{timestamp}`/`{uuid}`/`{random}`/`{topic}`）
+- ✅ 外部 MQ 通信（PSEUDO HOST 路徑 + REAL 模式真實 produce/consume）
+- ✅ 網頁連接配置面板（NameServer + 超時 + 消費者組前綴，持久化到文件，立即生效）
 - ✅ 監控指標（真實 JVM CPU/內存 + RocketMQ broker put/get TPS）
 - ✅ 活動日誌（審計日誌 + 實時 STOMP 推送）
 - ✅ 主從複製（Master + Slave 同時運行）
-- ✅ 後端測試套件（72 tests pass, 2 skipped）
+- ✅ 後端測試套件（128 tests pass, 2 skipped）
 - ✅ 前端 typecheck + ESLint 通過
 - ✅ 手動節點登記（HOST + VIRTUAL）
 
@@ -175,6 +188,7 @@ page.tsx → components → hooks → lib/api.ts → 後端 REST/STOMP
 | 文件 | 測試數 | 方法 |
 | --- | --- | --- |
 | `ComprehensiveSystemTest` | 57 | 6 種黑盒測試方法（等價類、邊界值、正交試驗、判定表、錯誤猜測、場景法） |
+| `MessageTemplateAndConfigTest` | 56 | 6 種黑盒測試方法覆蓋消息模板和連接配置功能 |
 | `ClusterServiceRegistrationTest` | 3 | 服務登記集成測試 |
 | `ClusterFacadeSmokeTest` | 2 | 門面冒煙測試 |
 | `FixesVerificationTest` | 3 | P0/P1/P3 修復回歸 |
@@ -182,7 +196,7 @@ page.tsx → components → hooks → lib/api.ts → 後端 REST/STOMP
 | `EmbeddedRocketMqRuntimeMetricsTest` | 3 | 嵌入式指標測試（1 條件啟用） |
 | `EmbeddedRocketMqSpikeTest` | 1 | 嵌入式 Spike（條件啟用） |
 | `ClusterManagerApplicationTests` | 1 | 應用上下文加載 |
-| **合計** | **72** | **2 條件跳過** |
+| **合計** | **128** | **2 條件跳過** |
 
 ### 嵌入式 RocketMQ 測試
 需要 JVM 模块參數（已在 `pom.xml` Surefire `argLine` 配置）：
@@ -198,3 +212,7 @@ page.tsx → components → hooks → lib/api.ts → 後端 REST/STOMP
 - **Broker stats key**：RocketMQ `BROKER_PUT_NUMS`/`BROKER_GET_NUMS` 的 stats key 是 `brokerClusterName`（`embedded-cluster`），不是 `brokerName`。
 - **TPS 滾動窗口**：RocketMQ stats 為 60 秒滾動窗口，消息發送後需在窗口期內查詢才能看到非零值。
 - **手動節點登記**：HOST 節點綁定真實地址（localhost/127.0.0.1），VIRTUAL 節點要求 CIDR 範圍內的 IPv4 地址。
+- **消息模板占位符**：`MessageTemplateService.render()` 在發送時替換 `{index}`/`{timestamp}`/`{uuid}`/`{random}`/`{topic}`，支持預定義模板和自定義輸入。
+- **外部 MQ 通信三層後備**：PSEUDO HOST 路徑按優先級查找 NameServer 地址——登記的 HOST 節點 > 運行時 UI 配置 > 啟動環境變量。
+- **運行時配置持久化**：UI 配置保存到 `run/rocketmq-connection.properties`，啟動時自動加載，立即生效無需重啟。
+- **RealRocketMqAdminClient 條件啟用**：`@ConditionalOnProperty(prefix="cluster.rocketmq", name="name-servers")`，配置了 NameServer 地址時自動替代 MockRocketMqAdminClient。

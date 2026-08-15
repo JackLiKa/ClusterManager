@@ -29,10 +29,12 @@ import type {
   LogEntry,
   MessageSimulationRequest,
   MessageSimulationResult,
+  MessageTemplate,
   MonitoringSnapshot,
   NodeOperationRequest,
   OperationResult,
   ProviderDescriptor,
+  RocketMqConnectionConfig,
   ServiceRegistrationRequest,
 } from '@/types/cluster'
 
@@ -73,6 +75,33 @@ function pathOf(selection: ClusterSelection): string {
  */
 export async function fetchProviders(): Promise<ProviderDescriptor[]> {
   const { data } = await api.get<ProviderDescriptor[]>('/clusters/providers')
+  return data
+}
+
+/**
+ * 獲取所有預定義消息模板列表。
+ * 後端端點：GET /api/clusters/message-templates
+ */
+export async function fetchMessageTemplates(): Promise<MessageTemplate[]> {
+  const { data } = await api.get<MessageTemplate[]>('/clusters/message-templates')
+  return data
+}
+
+/**
+ * 獲取當前 RocketMQ 連接配置。
+ * 後端端點：GET /api/clusters/settings/rocketmq
+ */
+export async function fetchRocketMqConfig(): Promise<RocketMqConnectionConfig> {
+  const { data } = await api.get<RocketMqConnectionConfig>('/clusters/settings/rocketmq')
+  return data
+}
+
+/**
+ * 更新 RocketMQ 連接配置，立即生效並持久化。
+ * 後端端點：PUT /api/clusters/settings/rocketmq
+ */
+export async function updateRocketMqConfig(config: RocketMqConnectionConfig): Promise<RocketMqConnectionConfig> {
+  const { data } = await api.put<RocketMqConnectionConfig>('/clusters/settings/rocketmq', config)
   return data
 }
 

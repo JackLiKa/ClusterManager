@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/select'
 import { ClusterTopologyCard } from '@/components/cluster-topology-card'
 import { MessageWorkbenchCard } from '@/components/message-workbench-card'
+import { ConnectionConfigCard } from '@/components/connection-config-card'
 import { OperationsPanel } from '@/components/operations-panel'
 import { MetricsCard } from '@/components/metrics-card'
 import { useClusterStreams } from '@/hooks/use-cluster-streams'
@@ -214,8 +215,9 @@ export default function ClusterOverviewPage() {
             onTopologyRefresh={refreshTopology}
           />
         </div>
-        {/* 右列：消息工作台 + 監控指標 */}
+        {/* 右列：連接配置 + 消息工作台 + 監控指標 */}
         <div className="space-y-4">
+          <ConnectionConfigCard />
           <MessageWorkbenchCard selection={selection} topology={topology} />
           <MetricsCard metrics={metrics} topology={topology} />
         </div>

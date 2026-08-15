@@ -123,6 +123,22 @@ export interface MessageSimulationRequest {
   headers?: Record<string, string>
 }
 
+/** 消息模板——對應後端 MessageTemplate record */
+export interface MessageTemplate {
+  id: string
+  name: string
+  template: string
+  description: string
+}
+
+/** RocketMQ 連接配置——對應後端 ConfigSnapshot record */
+export interface RocketMqConnectionConfig {
+  nameServers: string[]
+  sendMsgTimeoutMs: number
+  consumeTimeoutSeconds: number
+  consumerGroupPrefix: string
+}
+
 /** 服務登記請求——對應後端 ServiceRegistrationRequest DTO */
 export interface ServiceRegistrationRequest {
   nodeId: string

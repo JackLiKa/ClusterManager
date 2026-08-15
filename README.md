@@ -44,6 +44,9 @@ and live monitoring metrics.
 - **Embedded real RocketMQ** — runs an actual Apache RocketMQ 4.9.8 NameServer + Broker in-process. No fake mocks, no Docker.
 - **Topology visualization** — interactive ECharts graph showing NameServer, Master, and Slave nodes and their relationships.
 - **Message simulation** — produce and consume real messages through the embedded broker; watch delivery succeed in real time.
+- **Message templates** — 6 built-in templates (JSON order, plain text, RocketMQ event, key-value, user behavior) with placeholder substitution (`{index}`, `{timestamp}`, `{uuid}`, `{random}`, `{topic}`). Custom templates supported.
+- **External MQ communication** — connect to your local RocketMQ cluster via the web UI configuration panel. Supports PSEUDO mode (HOST node bridge) and REAL mode (real admin client with produce/consume).
+- **Web-based connection config** — configure NameServer addresses, timeouts, and consumer group prefix directly in the browser. Changes take effect immediately and persist across restarts.
 - **Monitoring metrics** — live CPU, memory, and network I/O charts for each node, streamed over STOMP/WebSocket.
 - **Node lifecycle management** — start, stop, and restart individual nodes; observe cluster state transitions.
 - **Master–Slave replication** — run a Master and Slave simultaneously and see replication in action.

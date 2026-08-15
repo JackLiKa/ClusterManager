@@ -5,17 +5,20 @@
  *
  * 職責：
  * - 提供消息模擬表單（topic、consumerGroup、消息數量、payload 模板、producer/consumer 節點選擇）
+ * - 支持預定義消息模板選擇 + 自定義模板輸入
+ * - 模板支持占位符替換（{index}、{timestamp}、{uuid}、{random}、{topic}）
  * - 調用 simulateMessages API 執行真實的 RocketMQ produce/consume
  * - 展示每條消息的投遞結果（成功/失敗 + 詳情）
  * - 表單字段校驗（topic 和 consumerGroup 必填，消息數量 >= 1）
  *
  * 與後端的交互：
+ * - GET /api/clusters/message-templates（獲取模板列表）
  * - POST /api/clusters/{...}/messages/simulate
  * - 請求體：MessageSimulationRequest
  * - 響應體：MessageSimulationResult（含每條消息的投遞結果）
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,11 +31,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { simulateMessages } from '@/lib/api'
+import { simulateMessages, fetchMessageTemplates } from '@/lib/api'
 import type {
   ClusterSelection,
   ClusterTopology,
   MessageDeliveryResult,
+  MessageTemplate,
 } from '@/types/cluster'
 
 interface MessageWorkbenchCardProps {
@@ -49,6 +53,10 @@ export function MessageWorkbenchCard({ selection, topology }: MessageWorkbenchCa
   const [producerNodeId, setProducerNodeId] = useState('')
   const [consumerNodeIds, setConsumerNodeIds] = useState<string>('')
 
+  // 模板狀態
+  const [templates, setTemplates] = useState<MessageTemplate[]>([])
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('custom')
+
   // 結果狀態
   const [results, setResults] = useState<MessageDeliveryResult[] | null>(null)
   const [loading, setLoading] = useState(false)
@@ -57,6 +65,35 @@ export function MessageWorkbenchCard({ selection, topology }: MessageWorkbenchCa
   // 從拓撲中提取可用節點
   const brokerNodes = topology?.nodes.filter((n) => n.labels?.role?.includes('broker')) ?? []
   const allNodes = topology?.nodes ?? []
+
+  // 加載模板列表
+  useEffect(() => {
+    let cancelled = false
+    fetchMessageTemplates()
+      .then((data) => {
+        if (!cancelled) setTemplates(data)
+      })
+      .catch(() => {
+        // 模板加載失敗時靜默處理，用戶仍可手動輸入
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  /** 模板選擇變化時更新 payload */
+  function handleTemplateChange(templateId: string | null) {
+    const id = templateId ?? 'custom'
+    setSelectedTemplateId(id)
+    if (id === 'custom') {
+      // 自定義模式，保留當前輸入
+      return
+    }
+    const template = templates.find((t) => t.id === id)
+    if (template) {
+      setPayloadTemplate(template.template)
+    }
+  }
 
   /** 執行消息模擬 */
   async function handleSimulate() {
@@ -150,12 +187,42 @@ export function MessageWorkbenchCard({ selection, topology }: MessageWorkbenchCa
             </Select>
           </div>
           <div className="col-span-2 space-y-2">
-            <Label htmlFor="payloadTemplate">Payload 模板</Label>
+            <Label htmlFor="templateSelect">消息模板</Label>
+            <Select value={selectedTemplateId} onValueChange={handleTemplateChange}>
+              <SelectTrigger id="templateSelect">
+                <SelectValue placeholder="選擇預定義模板或自定義" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="custom">自定義（手動輸入）</SelectItem>
+                {templates.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedTemplateId !== 'custom' && (
+              <p className="text-xs text-muted-foreground">
+                {templates.find((t) => t.id === selectedTemplateId)?.description}
+              </p>
+            )}
+          </div>
+          <div className="col-span-2 space-y-2">
+            <Label htmlFor="payloadTemplate">
+              Payload 模板
+              <span className="ml-2 text-xs text-muted-foreground">
+                支持占位符：{'{index}'}、{'{timestamp}'}、{'{uuid}'}、{'{random}'}、{'{topic}'}
+              </span>
+            </Label>
             <Input
               id="payloadTemplate"
               value={payloadTemplate}
-              onChange={(e) => setPayloadTemplate(e.target.value)}
-              placeholder='例如: {"msg":"hello"}'
+              onChange={(e) => {
+                setPayloadTemplate(e.target.value)
+                setSelectedTemplateId('custom')
+              }}
+              placeholder='例如: {"orderId":"{uuid}","index":{index}}'
+              className="font-mono text-xs"
             />
           </div>
           <div className="col-span-2 space-y-2">
