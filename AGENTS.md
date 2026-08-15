@@ -25,7 +25,7 @@ MQCluster/
 │   │   ├── core/             → 領域模型與端口（無外部依賴）
 │   │   └── infrastructure/   → 適配器實現（pseudo 嵌入式 RocketMQ + rocketmq admin）
 │   ├── src/main/resources/   → application.properties
-│   ├── src/test/             → JUnit 5 + AssertJ 測試（72 tests）
+│   ├── src/test/             → JUnit 5 + AssertJ 測試（128 tests）
 │   ├── pom.xml               → Maven 構建（artifact: mqcluster）
 │   └── AGENTS.md             → 後端詳細導航
 ├── next/          → Next.js 16 前端（端口 3000）
@@ -67,7 +67,7 @@ MQCluster/
 ```powershell
 cd java
 .\mvnw.cmd spring-boot:run          # 開發：http://localhost:8088
-.\mvnw.cmd clean verify             # 完整構建 + 測試（72 tests）
+.\mvnw.cmd clean verify             # 完整構建 + 測試（128 tests）
 .\mvnw.cmd clean package            # fat JAR → target/mqcluster-0.1.0-SNAPSHOT.jar
 ```
 
@@ -154,7 +154,7 @@ page.tsx → components → hooks → lib/api.ts → 後端 REST/STOMP
 ## 7. 已驗證功能
 
 - ✅ Provider 列表加載
-- ✅ 集群拓撲展示（3 節點：NameServer + Master + Slave + 圖例）
+- ✅ 集群拓撲展示（3 節點：狀態着色 灰/綠/紅/黃 + 角色定形狀 圓/矩形/菱形 + 拖拽 + 圖例）
 - ✅ 節點啟動/停止/重啟（嵌入式真實 RocketMQ）
 - ✅ 消息 produce/consume 模擬（真實 RocketMQ 投遞，30/30 成功）
 - ✅ 消息模板系統（6 預定義模板 + 占位符替換 `{index}`/`{timestamp}`/`{uuid}`/`{random}`/`{topic}`）

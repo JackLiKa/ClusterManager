@@ -12,7 +12,7 @@ export type ClusterMode = 'PSEUDO' | 'REAL'
 export type MiddlewareType = 'ROCKETMQ'
 
 /** 節點狀態——對應後端 NodeStatus 枚舉 */
-export type NodeStatus = 'STOPPED' | 'STARTING' | 'RUNNING' | 'FAILED'
+export type NodeStatus = 'STOPPED' | 'STARTING' | 'RUNNING' | 'DEGRADED' | 'FAILED'
 
 /** 操作類型——對應後端 OperationType 枚舉 */
 export type OperationType = 'START' | 'STOP' | 'RESTART'

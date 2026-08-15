@@ -29,13 +29,16 @@ and live monitoring metrics.
 
 ---
 
-## Screenshots
+## Visual Dashboard
 
-> Place dashboard screenshots here.
+MQCluster provides an interactive web dashboard for visualizing and operating RocketMQ clusters:
 
-| Dashboard | Topology | Message Workbench |
-| :---: | :---: | :---: |
-| ![Dashboard](docs/screenshots/dashboard.png) | ![Topology](docs/screenshots/topology.png) | ![Messages](docs/screenshots/messages.png) |
+- **Topology Graph** — Force-directed graph with drag-and-drop nodes. Node color reflects status (gray = stopped, green = running, yellow = degraded, red = failed). Node shape reflects role (circle = NameServer, rounded rect = Broker Master, diamond = Broker Slave). Link style reflects health (solid green = healthy, dashed gray = disconnected).
+- **Message Workbench** — Send and consume real messages with built-in templates (JSON order, plain text, RocketMQ event, key-value, user behavior) or custom payloads. Placeholder substitution (`{index}`, `{timestamp}`, `{uuid}`, `{random}`, `{topic}`) makes it easy to generate realistic test data.
+- **Connection Config Panel** — Configure external RocketMQ NameServer addresses, send/consume timeouts, and consumer group prefix directly in the browser. Changes take effect immediately and persist across restarts.
+- **Monitoring Metrics** — Live CPU, memory, and network I/O charts per node, streamed over STOMP/WebSocket.
+- **Operations Panel** — Start, stop, and restart individual nodes. Every operation is recorded in the activity log with real-time STOMP push.
+- **Learning Guide** — Built-in guided walkthroughs covering architecture basics, node lifecycle, message models, master-slave replication, and observability.
 
 ---
 
