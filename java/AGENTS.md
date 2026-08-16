@@ -61,29 +61,25 @@ src/main/java/com/example/clustermanager
 > 必須在啟動前設置 `JAVA_HOME` 為 Java 21。
 
 ```powershell
-# Step 1: 設置 Java 21（當前 session，不影響系統全局）
+# Step 1: 設置 Java 21
 $env:JAVA_HOME = "C:\Users\13026\.jdks\ms-21.0.9"
 $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
-java -version                        # 確認顯示 21.x.x
+java -version
 
 # Step 2: 殺掉佔用 8088 端口的舊進程
-$proc = Get-NetTCPConnection -LocalPort 8088 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
-if ($proc) { Stop-Process -Id $proc.OwningProcess -Force; Write-Output "Killed PID $($proc.OwningProcess)" }
-else { Write-Output "Port 8088 free" }
+Get-NetTCPConnection -LocalPort 8088 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
 Start-Sleep -Seconds 2
 
 # Step 3: 清理運行殘留（遇到 Broker 端口衝突或 store lock 錯誤時執行）
 cd A:\project\Cluster\java
-if (Test-Path run) { Remove-Item -Recurse -Force run; Write-Output "Cleaned run/" }
-.\mvnw.cmd clean                     # 清理 target/（解決 class version 不匹配）
+if (Test-Path run) { Remove-Item -Recurse -Force run }
+.\mvnw.cmd clean
 
 # Step 4: 啟動後端
 .\mvnw.cmd spring-boot:run
-# 等待 "Started ClusterManagerApplication" 日誌
 
 # Step 5: 驗證
 Invoke-WebRequest -Uri "http://localhost:8088/api/clusters/providers" -UseBasicParsing
-# 應返回 200 + JSON
 ```
 
 ### 常見啟動失敗排查

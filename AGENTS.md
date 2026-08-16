@@ -97,48 +97,27 @@ Test-Path "C:\Users\13026\.jdks\ms-21.0.9\bin\java.exe"
 
 #### Step 1：清理舊進程和端口佔用
 ```powershell
-# 殺掉佔用 8088 端口的進程（後端）
-$proc = Get-NetTCPConnection -LocalPort 8088 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
-if ($proc) { Stop-Process -Id $proc.OwningProcess -Force; Write-Output "Killed backend PID $($proc.OwningProcess)" }
-else { Write-Output "Port 8088 free" }
-
-# 殺掉佔用 3000 端口的進程（前端）
-$proc = Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
-if ($proc) { Stop-Process -Id $proc.OwningProcess -Force; Write-Output "Killed frontend PID $($proc.OwningProcess)" }
-else { Write-Output "Port 3000 free" }
-
-# 等待端口釋放
+Get-NetTCPConnection -LocalPort 8088 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
+Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
 Start-Sleep -Seconds 2
 ```
 
 #### Step 2：清理運行殘留（可選，遇到啟動失敗時執行）
 ```powershell
-# 清理嵌入式 RocketMQ store（節點鎖文件殘留會導致 Broker 無法啟動）
 cd A:\project\Cluster\java
-if (Test-Path run) { Remove-Item -Recurse -Force run; Write-Output "Cleaned run/" }
-
-# 清理編譯產物（解決 class file version 不匹配）
+if (Test-Path run) { Remove-Item -Recurse -Force run }
 .\mvnw.cmd clean
-# 或手動刪除：if (Test-Path target) { Remove-Item -Recurse -Force target }
-
-# 清理前端構建緩存（遇到前端異常時執行）
 cd A:\project\Cluster\next
-if (Test-Path .next) { Remove-Item -Recurse -Force .next; Write-Output "Cleaned .next/" }
+if (Test-Path .next) { Remove-Item -Recurse -Force .next }
 ```
 
 #### Step 3：設置 Java 21 環境變量並啟動後端
 ```powershell
-# 設置當前 session 的 JAVA_HOME 為 Java 21（不影響系統全局配置）
 $env:JAVA_HOME = "C:\Users\13026\.jdks\ms-21.0.9"
 $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
-
-# 驗證 Java 版本（應顯示 21.x.x）
 java -version
-
-# 啟動後端
 cd A:\project\Cluster\java
 .\mvnw.cmd spring-boot:run
-# 等待看到 "Started ClusterManagerApplication" 日誌，後端在 http://localhost:8088
 ```
 
 #### Step 4：啟動前端
