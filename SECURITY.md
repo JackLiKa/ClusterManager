@@ -19,7 +19,9 @@ Security fixes are applied to the latest `main` branch and the most recent relea
 
 If you discover a security vulnerability in MQCluster, please report it responsibly:
 
-1. **Email** the maintainer at **jacklika.security@gmail.com** (replace with the project's real security contact).
+1. **Use GitHub Security Advisories** — go to
+   [https://github.com/JackLiKa/MQCluster/security/advisories/new](https://github.com/JackLiKa/MQCluster/security/advisories/new)
+   and submit a private vulnerability report.
 2. Include the following in your report:
    - A description of the vulnerability and its potential impact.
    - Steps to reproduce (proof-of-concept if possible).

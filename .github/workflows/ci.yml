@@ -28,6 +28,7 @@ jobs:
 
       - name: Make Maven wrapper executable (Unix)
         if: runner.os != 'Windows'
+        working-directory: java
         run: chmod +x ./mvnw
 
       - name: Build and test
