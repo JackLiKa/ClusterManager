@@ -179,6 +179,329 @@ export default function GuidePage() {
           </p>
         </CardContent>
       </Card>
+
+      {/* 章節 6：動態限流與資源安全 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Badge>6</Badge>
+            動態限流與資源安全
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm leading-relaxed">
+          <p>
+            本平台根據你的電腦硬件配置動態計算最大安全消息量，防止本地系統卡死。
+          </p>
+          <ul className="list-disc pl-6 space-y-2">
+            <li>
+              <strong>多因素綜合公式</strong>：上限 = min(內存因子, CPU 因子, 磁盤因子, 絕對上限) × 安全係數
+            </li>
+            <li>
+              <strong>內存因子</strong>：可用 JVM 堆 MB × 50 條/MB
+            </li>
+            <li>
+              <strong>CPU 因子</strong>：邏輯核心數 × 200 條/核
+            </li>
+            <li>
+              <strong>磁盤因子</strong>：可用磁盤 GB × 100 條/GB
+            </li>
+            <li>
+              <strong>安全係數</strong>：0.7（保留 30% 餘量）
+            </li>
+          </ul>
+          <div className="rounded-md bg-muted p-3 text-xs space-y-1">
+            <p><strong>示例</strong>：16 核 CPU、3883MB 可用堆、238GB 磁盤 → 上限 2240 條/批次</p>
+            <p>不同電腦看到的上限不同——這是因為每台機器的硬件配置不同。</p>
+          </div>
+          <p className="text-muted-foreground">
+            超過此限制的請求會被後端直接拒絕（HTTP 400），前端也會在輸入框旁顯示當前上限。
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* 章節 7：數據面板 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Badge>7</Badge>
+            數據面板與趨勢分析
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm leading-relaxed">
+          <p>
+            數據面板提供集群級別的趨勢可視化，幫助你理解集群隨時間的變化。
+          </p>
+          <ul className="list-disc pl-6 space-y-2">
+            <li>
+              <strong>折線圖</strong>：CPU、內存、投遞 TPS、消費 TPS 的時間序列趨勢（30 個採樣點）
+            </li>
+            <li>
+              <strong>柱狀圖</strong>：各節點當前指標的橫向對比，直觀看出哪個節點壓力最大
+            </li>
+            <li>
+              <strong>數值卡片</strong>：平均 CPU、平均內存、總投遞 TPS、總消費 TPS 的實時聚合值
+            </li>
+          </ul>
+          <p className="text-muted-foreground">
+            雙 Y 軸設計：左軸為百分比（CPU/內存），右軸為消息速率（TPS）。
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* 進階學習模塊 */}
+      <div className="pt-4">
+        <h2 className="text-2xl font-bold border-b pb-2 mb-4">進階學習模塊</h2>
+        <p className="text-muted-foreground text-sm mb-4">
+          以下概念超出本平台當前的實作範圍，但對深入理解 RocketMQ 生產環境使用至關重要。
+          建議在掌握基礎模塊後閱讀，並查閱 RocketMQ 官方文檔進行動手實驗。
+        </p>
+      </div>
+
+      {/* 章節 8：消息發送模式 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Badge variant="secondary">進階</Badge>
+            8. 消息發送模式——同步、異步、單向
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm leading-relaxed">
+          <p>
+            RocketMQ 支持三種消息發送模式，適用於不同的可靠性和延遲需求：
+          </p>
+          <ul className="list-disc pl-6 space-y-2">
+            <li>
+              <strong>同步發送（Sync Send）</strong>：Producer 發送後阻塞等待 Broker 返回 ACK。
+              可靠性最高，延遲最大。本平台的「消息工作台」使用此模式。
+              <div className="rounded-md bg-muted p-2 text-xs mt-1 font-mono">
+                {'SendResult result = producer.send(msg);'}
+              </div>
+            </li>
+            <li>
+              <strong>異步發送（Async Send）</strong>：Producer 發送後立即返回，通過回調函數接收結果。
+              適用於對響應時間敏感的場景。
+              <div className="rounded-md bg-muted p-2 text-xs mt-1 font-mono">
+                {'producer.send(msg, new SendCallback() {'}{'}'}
+                <br />&nbsp;&nbsp;{'public void onSuccess(SendResult r) {'}{' } {'}{'}'}
+                <br />&nbsp;&nbsp;{'public void onException(Throwable e) {'}{' } {'}{'}'}
+                <br/>{'}'}{'}'});
+              </div>
+            </li>
+            <li>
+              <strong>單向發送（One-way Send）</strong>：Producer 只負責發送，不等待 ACK 也不觸發回調。
+              延遲最低，可靠性最低，適用於日誌收集等容忍丟失的場景。
+              <div className="rounded-md bg-muted p-2 text-xs mt-1 font-mono">
+                {'producer.sendOneway(msg);'}
+              </div>
+            </li>
+          </ul>
+          <div className="rounded-md bg-blue-50 dark:bg-blue-950 p-3 text-xs">
+            <strong>本平台現狀</strong>：消息工作台僅展示同步發送。
+            如需實驗異步/單向模式，可在外部 RocketMQ 項目中使用 RocketMQ Client SDK 實作，
+            並通過「連接配置」面板將本平台連接到你的本地 RocketMQ。
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 章節 9：消費模式 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Badge variant="secondary">進階</Badge>
+            9. 消費模式——Push vs Pull、順序消費
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm leading-relaxed">
+          <p>
+            RocketMQ 提供兩種消費者實作模式和兩種消費順序語義：
+          </p>
+          <ul className="list-disc pl-6 space-y-2">
+            <li>
+              <strong>Push 消費者</strong>：類似事件驅動，Broker 有消息時主動推送給 Consumer。
+              實作上仍是 Pull 長輪詢，但對開發者透明。適用於大多數業務場景。
+            </li>
+            <li>
+              <strong>Pull 消費者</strong>：Consumer 主動拉取消息，可精確控制拉取速率和偏移量。
+              適用於流式處理或批量消費場景。
+            </li>
+            <li>
+              <strong>並發消費</strong>：多線程同時消費同一隊列的消息，無順序保證。吞吐量高。
+            </li>
+            <li>
+              <strong>順序消費</strong>：保證同一 MessageQueue 內的消息按發送順序消費。
+              吞吐量較低，適用於訂單狀態流轉等有序場景。
+            </li>
+          </ul>
+          <div className="rounded-md bg-blue-50 dark:bg-blue-950 p-3 text-xs">
+            <strong>本平台現狀</strong>：消息工作台使用 Push + 並發消費。
+            順序消費需要在外部項目中配置 <code>MessageListenerOrderly</code> 並驗證消息順序。
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 章節 10：事務消息 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Badge variant="secondary">進階</Badge>
+            10. 事務消息——最終一致性方案
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm leading-relaxed">
+          <p>
+            事務消息是 RocketMQ 的特色功能，用於實現分布式事務的最終一致性。
+          </p>
+          <ol className="list-decimal pl-6 space-y-2">
+            <li>
+              Producer 發送「半消息」（Half Message）到 Broker，此消息對 Consumer 不可見
+            </li>
+            <li>
+              Broker 返回發送成功後，Producer 執行本地事務（如扣庫存、寫訂單）
+            </li>
+            <li>
+              本地事務成功 → Producer 向 Broker 發送 <code>COMMIT</code>，消息變為可見
+            </li>
+            <li>
+              本地事務失敗 → Producer 發送 <code>ROLLBACK</code>，消息被刪除
+            </li>
+            <li>
+              若 Broker 未收到二次確認（如 Producer 宕機），Broker 會回查 Producer 的本地事務狀態
+            </li>
+          </ol>
+          <div className="rounded-md bg-muted p-3 text-xs font-mono">
+            {'// 實作 TransactionListener'}<br />
+            {'TransactionMQProducer producer = new TransactionMQProducer("group");'}<br />
+            {'producer.setTransactionListener(new TransactionListener() {'}{'}'}<br />
+            &nbsp;&nbsp;{'public LocalTransactionState executeLocalTransaction(Message msg, Object arg) {'}{'}'}<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;{'// 執行本地事務'}<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;{'return LocalTransactionState.COMMIT_MESSAGE;'}<br />
+            &nbsp;&nbsp;{'}'}{'}'}<br />
+            &nbsp;&nbsp;{'public LocalTransactionState checkLocalTransaction(MessageExt msg) {'}{'}'}<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;{'// 回查本地事務狀態'}<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;{'return LocalTransactionState.COMMIT_MESSAGE;'}<br />
+            &nbsp;&nbsp;{'}'}{'}'}<br />
+            {'}'}{'}'};
+          </div>
+          <div className="rounded-md bg-blue-50 dark:bg-blue-950 p-3 text-xs">
+            <strong>本平台現狀</strong>：未實作事務消息 UI。建議在本地啟動獨立 RocketMQ 項目實驗，
+            本平台可通過連接配置面板協助觀察 Broker 狀態。
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 章節 11：死信隊列 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Badge variant="secondary">進階</Badge>
+            11. 死信隊列（DLQ）與消息重試
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm leading-relaxed">
+          <p>
+            當消息消費失敗時，RocketMQ 會自動重試。超過最大重試次數（默認 16 次）後，
+            消息進入死信隊列（Dead Letter Queue）。
+          </p>
+          <ul className="list-disc pl-6 space-y-2">
+            <li>
+              <strong>重試機制</strong>：消費失敗後，消息返回 Broker 並延遲重試。
+              重試間隔遞增：10s、30s、1m、2m、3m、4m、5m、6m、7m、8m、9m、10m、20m、30m、1h、2h
+            </li>
+            <li>
+              <strong>死信 Topic 命名</strong>：<code>%DLQ%消費者組名</code>
+            </li>
+            <li>
+              <strong>處理方式</strong>：人工訂閱死信 Topic 排查問題，或寫定時任務自動補償
+            </li>
+          </ul>
+          <div className="rounded-md bg-blue-50 dark:bg-blue-950 p-3 text-xs">
+            <strong>本平台現狀</strong>：嵌入式集群未暴露 DLQ 管理界面。
+            可通過 <code>mqadmin</code> 命令行工具查詢死信隊列：
+            <code className="block mt-1">mqadmin queryDLQMsg -g 消費者組 -t Topic</code>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 章節 12：消息過濾 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Badge variant="secondary">進階</Badge>
+            12. 消息過濾——Tag 與 SQL92
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm leading-relaxed">
+          <p>
+            RocketMQ 支持在 Consumer 端按條件過濾消息，避免接收無關消息：
+          </p>
+          <ul className="list-disc pl-6 space-y-2">
+            <li>
+              <strong>Tag 過濾</strong>：Producer 在消息上設置 Tag，Consumer 訂閱時指定 Tag。
+              簡單高效，適用於粗粒度分類。
+              <div className="rounded-md bg-muted p-2 text-xs mt-1 font-mono">
+                {'producer.send(new Message("Topic", "TagA", body));'}<br />
+                {'consumer.subscribe("Topic", "TagA || TagB");'}
+              </div>
+            </li>
+            <li>
+              <strong>SQL92 過濾</strong>：使用 SQL 表達式過濾消息屬性，支持複雜條件。
+              <div className="rounded-md bg-muted p-2 text-xs mt-1 font-mono">
+                {'consumer.subscribe("Topic",'}<br />
+                &nbsp;&nbsp;{'MessageSelector.bySql("age > 18 AND gender = \'F\'")'};
+              </div>
+            </li>
+            <li>
+              <strong>類過濾</strong>：通過實作 <code>MessageFilter</code> 介面在 Broker 端過濾，
+              適用於需要自定義邏輯的場景。
+            </li>
+          </ul>
+          <div className="rounded-md bg-blue-50 dark:bg-blue-950 p-3 text-xs">
+            <strong>本平台現狀</strong>：消息工作台未暴露 Tag/SQL 過濾選項。
+            可在外部項目中實驗，本平台用於觀察基礎消息流轉。
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 章節 13：進階運維 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Badge variant="secondary">進階</Badge>
+            13. 生產環境運維要點
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm leading-relaxed">
+          <p>
+            本平台幫助你理解集群拓撲和消息流轉，生產環境還需關注以下運維要點：
+          </p>
+          <ul className="list-disc pl-6 space-y-2">
+            <li>
+              <strong>消息堆積</strong>：Consumer 消費速度跟不上 Producer 發送速度時，
+              消息在 Broker 上堆積。需監控隊列深度並擴容 Consumer。
+            </li>
+            <li>
+              <strong>消息軌跡</strong>：開啟消息軌跡（Message Trace）可追蹤消息從產生到消費的全鏈路，
+              用於問題排查。本平台的活動日誌是簡化版的軌跡記錄。
+            </li>
+            <li>
+              <strong>Broker 擴容</strong>：新增 Broker 時需配置相同的 NameServer 地址，
+              Topic 的 MessageQueue 會自動分配到新 Broker。
+            </li>
+            <li>
+              <strong>Dledger 集群</strong>：RocketMQ 5.x 推薦使用 Dledger 替代 Master-Slave，
+              基於 Raft 協議實現自動故障轉移和選主。
+            </li>
+            <li>
+              <strong>Controller 模式</strong>：RocketMQ 5.x 的 Controller 組件提供統一的集群管理，
+              支持自動 Master 選舉和 Broker 上下線。
+            </li>
+          </ul>
+          <p className="text-muted-foreground">
+            建議查閱 <a href="https://rocketmq.apache.org/docs/" className="underline" target="_blank" rel="noopener noreferrer">RocketMQ 官方文檔</a>
+            {' '}深入了解生產環境最佳實踐。
+          </p>
+        </CardContent>
+      </Card>
     </div>
   )
 }
