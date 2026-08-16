@@ -31,12 +31,13 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { simulateMessages, fetchMessageTemplates } from '@/lib/api'
+import { simulateMessages, fetchMessageTemplates, fetchRateLimit } from '@/lib/api'
 import type {
   ClusterSelection,
   ClusterTopology,
   MessageDeliveryResult,
   MessageTemplate,
+  RateLimitResult,
 } from '@/types/cluster'
 
 interface MessageWorkbenchCardProps {
@@ -57,6 +58,9 @@ export function MessageWorkbenchCard({ selection, topology }: MessageWorkbenchCa
   const [templates, setTemplates] = useState<MessageTemplate[]>([])
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('custom')
 
+  // 限流狀態
+  const [rateLimit, setRateLimit] = useState<RateLimitResult | null>(null)
+
   // 結果狀態
   const [results, setResults] = useState<MessageDeliveryResult[] | null>(null)
   const [loading, setLoading] = useState(false)
@@ -66,7 +70,7 @@ export function MessageWorkbenchCard({ selection, topology }: MessageWorkbenchCa
   const brokerNodes = topology?.nodes.filter((n) => n.labels?.role?.includes('broker')) ?? []
   const allNodes = topology?.nodes ?? []
 
-  // 加載模板列表
+  // 加載模板列表和限流配置
   useEffect(() => {
     let cancelled = false
     fetchMessageTemplates()
@@ -75,6 +79,13 @@ export function MessageWorkbenchCard({ selection, topology }: MessageWorkbenchCa
       })
       .catch(() => {
         // 模板加載失敗時靜默處理，用戶仍可手動輸入
+      })
+    fetchRateLimit()
+      .then((data) => {
+        if (!cancelled) setRateLimit(data)
+      })
+      .catch(() => {
+        // 限流加載失敗時靜默處理
       })
     return () => {
       cancelled = true
@@ -107,6 +118,13 @@ export function MessageWorkbenchCard({ selection, topology }: MessageWorkbenchCa
     }
     if (!producerNodeId) {
       setError('請選擇生產者節點')
+      return
+    }
+    // 動態限流校驗——前端提前攔截，避免無效請求
+    if (rateLimit && messageCount > rateLimit.maxMessages) {
+      setError(
+        `消息數量 ${messageCount} 超過本機安全上限 ${rateLimit.maxMessages}（基於 CPU ${rateLimit.systemProfile.logicalCores} 核 / 堆 ${rateLimit.systemProfile.availableHeapMb}MB 計算）`,
+      )
       return
     }
 
@@ -162,14 +180,27 @@ export function MessageWorkbenchCard({ selection, topology }: MessageWorkbenchCa
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="messageCount">消息數量</Label>
+            <Label htmlFor="messageCount">
+              消息數量
+              {rateLimit && (
+                <span className="ml-2 text-xs text-blue-600">
+                  上限: {rateLimit.maxMessages}
+                </span>
+              )}
+            </Label>
             <Input
               id="messageCount"
               type="number"
               min={1}
+              max={rateLimit?.maxMessages ?? undefined}
               value={messageCount}
               onChange={(e) => setMessageCount(Number(e.target.value) || 1)}
             />
+            {rateLimit && messageCount > rateLimit.maxMessages && (
+              <p className="text-xs text-red-600">
+                超過本機安全上限 {rateLimit.maxMessages}
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="producerNodeId">生產者節點</Label>
@@ -246,29 +277,119 @@ export function MessageWorkbenchCard({ selection, topology }: MessageWorkbenchCa
           <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
         )}
 
-        {/* 結果展示 */}
+        {/* 結果展示——緊湊列表 + 統計摘要（避免大量消息時頁面過長） */}
         {results && (
-          <div className="space-y-2">
-            <h4 className="text-sm font-semibold">投遞結果（{results.length} 條）</h4>
-            <div className="space-y-1">
-              {results.map((r, i) => (
-                <div
-                  key={i}
-                  className="flex items-start gap-2 rounded-md border p-2 text-xs"
-                >
-                  <Badge variant={r.success ? 'default' : 'destructive'}>
-                    {r.success ? '成功' : '失敗'}
-                  </Badge>
-                  <div className="flex-1">
-                    <div className="font-mono">{r.messageKey}</div>
-                    <div className="text-muted-foreground">{r.detail}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <DeliveryResults key={results.length} results={results} />
         )}
       </CardContent>
     </Card>
+  )
+}
+
+/**
+ * 投遞結果展示組件——緊湊列表 + 統計摘要 + 分頁。
+ *
+ * 設計目標：
+ * - 大量消息（100+）時不讓頁面過長——每頁最多顯示 10 條
+ * - 頂部顯示統計摘要：總數、成功數、失敗數、成功率、耗時
+ * - 每條結果緊湊顯示：序號 + 成功/失敗 Badge + messageKey（截斷）+ 詳情（截斷）
+ * - 失敗結果優先顯示（用戶更關注失敗）
+ */
+function DeliveryResults({ results }: { results: MessageDeliveryResult[] }) {
+  const [page, setPage] = useState(0)
+  const pageSize = 10
+
+  // 統計摘要
+  const total = results.length
+  const successCount = results.filter((r) => r.success).length
+  const failCount = total - successCount
+  const successRate = total > 0 ? ((successCount / total) * 100).toFixed(1) : '0.0'
+
+  // 分頁
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  const currentPage = Math.min(page, totalPages - 1)
+  const startIdx = currentPage * pageSize
+  const pageItems = results.slice(startIdx, startIdx + pageSize)
+
+  return (
+    <div className="space-y-3">
+      {/* 統計摘要卡片 */}
+      <div className="grid grid-cols-4 gap-2 rounded-md border bg-muted/30 p-3">
+        <div className="text-center">
+          <div className="text-lg font-bold">{total}</div>
+          <div className="text-xs text-muted-foreground">總數</div>
+        </div>
+        <div className="text-center">
+          <div className="text-lg font-bold text-green-600">{successCount}</div>
+          <div className="text-xs text-muted-foreground">成功</div>
+        </div>
+        <div className="text-center">
+          <div className={`text-lg font-bold ${failCount > 0 ? 'text-red-600' : ''}`}>{failCount}</div>
+          <div className="text-xs text-muted-foreground">失敗</div>
+        </div>
+        <div className="text-center">
+          <div className={`text-lg font-bold ${successRate === '100.0' ? 'text-green-600' : 'text-yellow-600'}`}>
+            {successRate}%
+          </div>
+          <div className="text-xs text-muted-foreground">成功率</div>
+        </div>
+      </div>
+
+      {/* 緊湊列表——每頁最多 10 條 */}
+      <div className="space-y-1 max-h-[320px] overflow-y-auto">
+        {pageItems.map((r, i) => {
+          const idx = startIdx + i
+          return (
+            <div
+              key={idx}
+              className="flex items-center gap-2 rounded border px-2 py-1 text-xs hover:bg-muted/30"
+            >
+              <span className="text-muted-foreground w-8 shrink-0 text-right">#{idx + 1}</span>
+              <Badge
+                variant={r.success ? 'default' : 'destructive'}
+                className="shrink-0 px-1 py-0 text-[10px]"
+              >
+                {r.success ? 'OK' : 'FAIL'}
+              </Badge>
+              <span className="font-mono shrink-0 max-w-[120px] truncate" title={r.messageKey}>
+                {r.messageKey}
+              </span>
+              <span className="text-muted-foreground truncate flex-1" title={r.detail}>
+                {r.detail}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* 分頁控制 */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-muted-foreground">
+            第 {currentPage + 1} / {totalPages} 頁（{startIdx + 1}-{Math.min(startIdx + pageSize, total)} / {total}）
+          </span>
+          <div className="flex gap-1">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 px-2"
+              disabled={currentPage === 0}
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+            >
+              上一頁
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 px-2"
+              disabled={currentPage >= totalPages - 1}
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            >
+              下一頁
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }

@@ -30,6 +30,8 @@ import { MessageWorkbenchCard } from '@/components/message-workbench-card'
 import { ConnectionConfigCard } from '@/components/connection-config-card'
 import { OperationsPanel } from '@/components/operations-panel'
 import { MetricsCard } from '@/components/metrics-card'
+import { MetricsDashboard } from '@/components/metrics-dashboard'
+import { RateLimitCard } from '@/components/rate-limit-card'
 import { useClusterStreams } from '@/hooks/use-cluster-streams'
 import { fetchProviders, fetchTopology, fetchMetrics, fetchLogs } from '@/lib/api'
 import type {
@@ -247,13 +249,17 @@ export default function ClusterOverviewPage() {
             onTopologyRefresh={refreshTopology}
           />
         </div>
-        {/* 右列：連接配置 + 消息工作台 + 監控指標 */}
+        {/* 右列：連接配置 + 限流 + 消息工作台 + 監控指標 */}
         <div className="space-y-4">
           <ConnectionConfigCard />
+          <RateLimitCard />
           <MessageWorkbenchCard selection={selection} topology={topology} />
           <MetricsCard metrics={metrics} topology={topology} />
         </div>
       </div>
+
+      {/* 數據面板——全寬展示折線圖 + 柱狀圖 + 實時卡片 */}
+      <MetricsDashboard metrics={metrics} topology={topology} />
     </div>
   )
 }

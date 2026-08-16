@@ -58,6 +58,8 @@ public class ClusterController {
     private final com.example.clustermanager.application.service.MessageTemplateService messageTemplateService;
     /** RocketMQ 連接配置服務——運行時配置管理 */
     private final com.example.clustermanager.application.service.RocketMqConnectionConfigService connectionConfigService;
+    /** 動態限流服務——根據本機配置計算最大消息量限制 */
+    private final com.example.clustermanager.application.service.RateLimitService rateLimitService;
 
     /**
      * 构造器注入 facade 服务和模板服务。
@@ -67,10 +69,12 @@ public class ClusterController {
      */
     public ClusterController(ClusterFacadeService clusterFacadeService,
                              com.example.clustermanager.application.service.MessageTemplateService messageTemplateService,
-                             com.example.clustermanager.application.service.RocketMqConnectionConfigService connectionConfigService) {
+                             com.example.clustermanager.application.service.RocketMqConnectionConfigService connectionConfigService,
+                             com.example.clustermanager.application.service.RateLimitService rateLimitService) {
         this.clusterFacadeService = clusterFacadeService;
         this.messageTemplateService = messageTemplateService;
         this.connectionConfigService = connectionConfigService;
+        this.rateLimitService = rateLimitService;
     }
 
     /**
@@ -113,6 +117,19 @@ public class ClusterController {
     public com.example.clustermanager.application.service.RocketMqConnectionConfigService.ConfigSnapshot updateRocketMqConfig(
             @RequestBody com.example.clustermanager.application.service.RocketMqConnectionConfigService.ConfigSnapshot snapshot) {
         return connectionConfigService.update(snapshot);
+    }
+
+    /**
+     * GET /api/clusters/rate-limit — 獲取本機動態消息量限制。
+     *
+     * <p>根據本機 CPU 核數、JVM 堆內存、磁盤空間動態計算最大安全消息量。
+     * 每台機器看到的數值不同——取決於實際硬件配置。
+     *
+     * @return 限流結果（含最大消息量、各因子明細、系統配置快照）
+     */
+    @GetMapping("/rate-limit")
+    public com.example.clustermanager.application.service.RateLimitService.RateLimitResult getRateLimit() {
+        return rateLimitService.calculateLimit();
     }
 
     /**
@@ -260,6 +277,15 @@ public class ClusterController {
             @PathVariable String clusterId,
             @Valid @RequestBody MessageSimulationRequest request
     ) {
+        // 動態限流校驗——防止消息量超過本機安全上限
+        var limit = rateLimitService.calculateLimit();
+        if (request.messageCount() > limit.maxMessages()) {
+            throw new IllegalArgumentException(
+                    "消息數量 " + request.messageCount() + " 超過本機安全上限 " + limit.maxMessages()
+                            + "（基於 CPU " + limit.systemProfile().logicalCores() + " 核 / 堆 "
+                            + limit.systemProfile().availableHeapMb() + "MB / 磁盤 "
+                            + String.format("%.1f", limit.systemProfile().availableDiskGb()) + "GB 計算）");
+        }
         return clusterFacadeService.simulateMessages(new MessageSimulationCommand(
                 selection(clusterId, mode, middleware),
                 request.topic(),

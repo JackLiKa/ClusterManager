@@ -34,6 +34,7 @@ import type {
   NodeOperationRequest,
   OperationResult,
   ProviderDescriptor,
+  RateLimitResult,
   RocketMqConnectionConfig,
   ServiceRegistrationRequest,
 } from '@/types/cluster'
@@ -203,5 +204,17 @@ export async function simulateMessages(
     `${pathOf(selection)}/messages/simulate`,
     payload,
   )
+  return data
+}
+
+/**
+ * 獲取本機動態消息量限制。
+ * 後端端點：GET /api/clusters/rate-limit
+ *
+ * 根據本機 CPU 核數、JVM 堆內存、磁盤空間動態計算最大安全消息量。
+ * 每台機器看到的數值不同——取決於實際硬件配置。
+ */
+export async function fetchRateLimit(): Promise<RateLimitResult> {
+  const { data } = await api.get<RateLimitResult>('/clusters/rate-limit')
   return data
 }

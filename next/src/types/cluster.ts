@@ -154,3 +154,26 @@ export interface ServiceRegistrationRequest {
 export interface NodeOperationRequest {
   operationType: OperationType
 }
+
+/** 系統配置快照——對應後端 RateLimitService.SystemProfile record */
+export interface SystemProfile {
+  logicalCores: number
+  availableHeapMb: number
+  maxHeapMb: number
+  totalPhysicalMb: number
+  freePhysicalMb: number
+  systemCpuLoad: number
+  availableDiskGb: number
+}
+
+/** 限流計算結果——對應後端 RateLimitService.RateLimitResult record */
+export interface RateLimitResult {
+  maxMessages: number
+  minFloor: number
+  baselineCeiling: number
+  safetyCoefficient: number
+  messagesPerMb: number
+  messagesPerCore: number
+  messagesPerGb: number
+  systemProfile: SystemProfile
+}
