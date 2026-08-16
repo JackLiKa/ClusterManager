@@ -53,12 +53,56 @@ src/main/java/com/example/clustermanager
 .\mvnw.cmd clean package            # fat JAR → target/mqcluster-0.1.0-SNAPSHOT.jar
 ```
 
+### 啟動前必做步驟（Java 21 + 端口清理 + 殘留清理）
+
+> ⚠️ **Java 版本要求**：後端需要 **Java 21**（class file version 65.0）。
+> 若 `JAVA_HOME` 指向 Java 17（version 61.0），`spring-boot:run` 會報
+> `UnsupportedClassVersionError: ... has been compiled by a more recent version of the Java Runtime`。
+> 必須在啟動前設置 `JAVA_HOME` 為 Java 21。
+
+```powershell
+# Step 1: 設置 Java 21（當前 session，不影響系統全局）
+$env:JAVA_HOME = "C:\Users\13026\.jdks\ms-21.0.9"
+$env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
+java -version                        # 確認顯示 21.x.x
+
+# Step 2: 殺掉佔用 8088 端口的舊進程
+$proc = Get-NetTCPConnection -LocalPort 8088 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($proc) { Stop-Process -Id $proc.OwningProcess -Force; Write-Output "Killed PID $($proc.OwningProcess)" }
+else { Write-Output "Port 8088 free" }
+Start-Sleep -Seconds 2
+
+# Step 3: 清理運行殘留（遇到 Broker 端口衝突或 store lock 錯誤時執行）
+cd A:\project\Cluster\java
+if (Test-Path run) { Remove-Item -Recurse -Force run; Write-Output "Cleaned run/" }
+.\mvnw.cmd clean                     # 清理 target/（解決 class version 不匹配）
+
+# Step 4: 啟動後端
+.\mvnw.cmd spring-boot:run
+# 等待 "Started ClusterManagerApplication" 日誌
+
+# Step 5: 驗證
+Invoke-WebRequest -Uri "http://localhost:8088/api/clusters/providers" -UseBasicParsing
+# 應返回 200 + JSON
+```
+
+### 常見啟動失敗排查
+
+| 症狀 | 原因 | 解決方案 |
+| --- | --- | --- |
+| `UnsupportedClassVersionError (class file version 65.0)` | JAVA_HOME 指向 Java 17 | `$env:JAVA_HOME = "C:\Users\13026\.jdks\ms-21.0.9"` |
+| `Failed to bind to 0.0.0.0:8088` | 8088 端口被佔用 | 殺進程：`Get-NetTCPConnection -LocalPort 8088` → `Stop-Process` |
+| `Address already in use: bind`（Broker 端口） | 上次 Broker 進程未完全退出 | 殺進程 + `Remove-Item -Recurse -Force run` + 等待 2 秒 |
+| `Store lock file occupied` | RocketMQ store 鎖未釋放 | `Remove-Item -Recurse -Force run` |
+
 ### JVM 參數（重要）
 
 `spring-boot-maven-plugin` 配置了 `--add-opens` JVM 參數：
 - `--add-opens java.base/java.nio=ALL-UNNAMED`
 - `--add-opens java.base/java.lang.reflect=ALL-UNNAMED`
 - `--add-opens java.base/sun.nio.ch=ALL-UNNAMED`
+- `--add-opens java.base/java.lang=ALL-UNNAMED`
+- `--add-opens java.base/java.util=ALL-UNNAMED`
 - `--add-exports java.base/jdk.internal.ref=ALL-UNNAMED`
 
 **這些參數是必需的**——RocketMQ 5.3.3 在 Java 21 上 `Broker.shutdown()` 時需要反射訪問 `DirectByteBuffer.attachment()` 釋放內存映射文件。Java 21 模塊系統更嚴格，需要比 Java 17 多打開 `java.lang` 和 `java.util` 模塊。沒有這些參數，shutdown 拋 `InaccessibleObjectException`，store lock 文件無法刪除，重啟時 Broker 無法啟動。

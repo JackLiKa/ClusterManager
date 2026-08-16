@@ -81,11 +81,96 @@ npm run lint                        # ESLint
 npx tsc --noEmit                    # Typecheck
 ```
 
-### 開發流程
-1. 啟動後端：`cd java; .\mvnw.cmd spring-boot:run`
-2. 啟動前端：`cd next; npm run dev`
-3. 打開瀏覽器：`http://localhost:3000`
-4. 前端通過 Next.js rewrites 代理 `/api` 和 `/ws` 到後端 `localhost:8088`
+### 開發流程（完整啟動步驟）
+
+> ⚠️ **重要**：後端需要 **Java 21**（class file version 65.0）。若 `JAVA_HOME` 指向 Java 17（version 61.0），
+> `spring-boot:run` 會報 `UnsupportedClassVersionError`。啟動前必須確認 JDK 版本。
+> 若 8088/3000 端口被佔用或上次運行殘留了進程/文件，項目會啟動失敗，需先清理。
+
+#### Step 0：確認 Java 21 可用
+```powershell
+# 查看當前 JAVA_HOME（可能指向 Java 17，需切換到 Java 21）
+echo $env:JAVA_HOME
+# 確認 Java 21 路徑存在
+Test-Path "C:\Users\13026\.jdks\ms-21.0.9\bin\java.exe"
+```
+
+#### Step 1：清理舊進程和端口佔用
+```powershell
+# 殺掉佔用 8088 端口的進程（後端）
+$proc = Get-NetTCPConnection -LocalPort 8088 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($proc) { Stop-Process -Id $proc.OwningProcess -Force; Write-Output "Killed backend PID $($proc.OwningProcess)" }
+else { Write-Output "Port 8088 free" }
+
+# 殺掉佔用 3000 端口的進程（前端）
+$proc = Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($proc) { Stop-Process -Id $proc.OwningProcess -Force; Write-Output "Killed frontend PID $($proc.OwningProcess)" }
+else { Write-Output "Port 3000 free" }
+
+# 等待端口釋放
+Start-Sleep -Seconds 2
+```
+
+#### Step 2：清理運行殘留（可選，遇到啟動失敗時執行）
+```powershell
+# 清理嵌入式 RocketMQ store（節點鎖文件殘留會導致 Broker 無法啟動）
+cd A:\project\Cluster\java
+if (Test-Path run) { Remove-Item -Recurse -Force run; Write-Output "Cleaned run/" }
+
+# 清理編譯產物（解決 class file version 不匹配）
+.\mvnw.cmd clean
+# 或手動刪除：if (Test-Path target) { Remove-Item -Recurse -Force target }
+
+# 清理前端構建緩存（遇到前端異常時執行）
+cd A:\project\Cluster\next
+if (Test-Path .next) { Remove-Item -Recurse -Force .next; Write-Output "Cleaned .next/" }
+```
+
+#### Step 3：設置 Java 21 環境變量並啟動後端
+```powershell
+# 設置當前 session 的 JAVA_HOME 為 Java 21（不影響系統全局配置）
+$env:JAVA_HOME = "C:\Users\13026\.jdks\ms-21.0.9"
+$env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
+
+# 驗證 Java 版本（應顯示 21.x.x）
+java -version
+
+# 啟動後端
+cd A:\project\Cluster\java
+.\mvnw.cmd spring-boot:run
+# 等待看到 "Started ClusterManagerApplication" 日誌，後端在 http://localhost:8088
+```
+
+#### Step 4：啟動前端
+```powershell
+# 新開一個終端窗口
+cd A:\project\Cluster\next
+npm run dev
+# 等待看到 "Ready" 日誌，前端在 http://localhost:3000
+```
+
+#### Step 5：驗證啟動成功
+```powershell
+# 驗證後端
+Invoke-WebRequest -Uri "http://localhost:8088/api/clusters/providers" -UseBasicParsing
+# 應返回 200 + JSON provider 列表
+
+# 驗證前端
+Invoke-WebRequest -Uri "http://localhost:3000" -UseBasicParsing
+# 應返回 200 + HTML
+
+# 打開瀏覽器訪問 http://localhost:3000
+```
+
+#### 快速啟動一鍵腳本（端口空閒且 Java 21 已配置時）
+```powershell
+# 後端（終端 1）
+$env:JAVA_HOME = "C:\Users\13026\.jdks\ms-21.0.9"; $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
+cd A:\project\Cluster\java; .\mvnw.cmd spring-boot:run
+
+# 前端（終端 2）
+cd A:\project\Cluster\next; npm run dev
+```
 
 ### 嵌入式 RocketMQ JVM 參數
 RocketMQ 5.3.3 嵌入式運行需要 Java 模块訪問權限（Java 21 需要更多 --add-opens）：
@@ -97,6 +182,17 @@ RocketMQ 5.3.3 嵌入式運行需要 Java 模块訪問權限（Java 21 需要更
 --add-opens java.base/java.util=ALL-UNNAMED
 --add-exports java.base/jdk.internal.ref=ALL-UNNAMED
 ```
+
+### 常見啟動失敗排查
+
+| 症狀 | 原因 | 解決方案 |
+| --- | --- | --- |
+| `UnsupportedClassVersionError: class file version 65.0` | JAVA_HOME 指向 Java 17 | 設置 `$env:JAVA_HOME` 為 Java 21 路徑 |
+| `Failed to bind to 0.0.0.0:8088` | 8088 端口被佔用 | 執行 Step 1 殺進程 |
+| `Address already in use: bind`（Broker 端口） | 上次 Broker 進程未完全退出 | 殺進程 + 清理 `run/` 目錄 + 等待 2 秒 |
+| `Store lock file occupied` | RocketMQ store 鎖未釋放 | 清理 `java/run/` 目錄 |
+| 前端頁面空白 / API 404 | 後端未啟動或端口不匹配 | 確認後端 8088 已啟動，檢查 `next/.env.local` 的 `BACKEND_URL` |
+| `EADDRINUSE: address already in use 0.0.0.0:3000` | 3000 端口被佔用 | 執行 Step 1 殺進程 |
 
 ## 5. 架構（六邊形 / 端口與適配器）
 
