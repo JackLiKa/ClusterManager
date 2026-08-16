@@ -25,7 +25,7 @@ MQCluster/
 │   │   ├── core/             → 領域模型與端口（無外部依賴）
 │   │   └── infrastructure/   → 適配器實現（pseudo 嵌入式 RocketMQ + rocketmq admin）
 │   ├── src/main/resources/   → application.properties
-│   ├── src/test/             → JUnit 5 + AssertJ 測試（128 tests）
+│   ├── src/test/             → JUnit 5 + AssertJ 測試（148 tests）
 │   ├── pom.xml               → Maven 構建（artifact: mqcluster）
 │   └── AGENTS.md             → 後端詳細導航
 ├── next/          → Next.js 16 前端（端口 3000）
@@ -47,9 +47,9 @@ MQCluster/
 ## 3. 技術棧
 
 ### 後端（java/）
-- Java 17、Spring Boot 4.1.0
+- Java 21、Spring Boot 4.1.0
 - Spring Web / Validation / WebSocket / Actuator
-- Apache RocketMQ 4.9.8（嵌入式 NameServer + Broker）
+- Apache RocketMQ 5.3.3（嵌入式 NameServer + Broker）
 - JUnit 5 + AssertJ + Spring Boot Test
 - Maven（wrapper `mvnw`/`mvnw.cmd`，artifact: `mqcluster`）
 
@@ -67,7 +67,7 @@ MQCluster/
 ```powershell
 cd java
 .\mvnw.cmd spring-boot:run          # 開發：http://localhost:8088
-.\mvnw.cmd clean verify             # 完整構建 + 測試（128 tests）
+.\mvnw.cmd clean verify             # 完整構建 + 測試（148 tests）
 .\mvnw.cmd clean package            # fat JAR → target/mqcluster-0.1.0-SNAPSHOT.jar
 ```
 
@@ -88,10 +88,13 @@ npx tsc --noEmit                    # Typecheck
 4. 前端通過 Next.js rewrites 代理 `/api` 和 `/ws` 到後端 `localhost:8088`
 
 ### 嵌入式 RocketMQ JVM 參數
-RocketMQ 4.9.8 嵌入式運行需要 Java 模块訪問權限：
+RocketMQ 5.3.3 嵌入式運行需要 Java 模块訪問權限（Java 21 需要更多 --add-opens）：
 ```
 --add-opens java.base/java.nio=ALL-UNNAMED
+--add-opens java.base/java.lang.reflect=ALL-UNNAMED
 --add-opens java.base/sun.nio.ch=ALL-UNNAMED
+--add-opens java.base/java.lang=ALL-UNNAMED
+--add-opens java.base/java.util=ALL-UNNAMED
 --add-exports java.base/jdk.internal.ref=ALL-UNNAMED
 ```
 
@@ -163,10 +166,13 @@ page.tsx → components → hooks → lib/api.ts → 後端 REST/STOMP
 - ✅ 監控指標（真實 JVM CPU/內存 + RocketMQ broker put/get TPS）
 - ✅ 活動日誌（審計日誌 + 實時 STOMP 推送）
 - ✅ 主從複製（Master + Slave 同時運行）
-- ✅ 後端測試套件（128 tests pass, 2 skipped）
+- ✅ 後端測試套件（148 tests pass, 2 skipped）
 - ✅ 前端 typecheck + ESLint + build 通過
 - ✅ 手動節點登記（HOST + VIRTUAL）
 - ✅ 前端重試機制（後端未就緒時自動重試 + 錯誤重試按鈕）
+- ✅ 動態限流（基於本機 CPU/內存/磁盤 多因素綜合公式，每台機器上限不同）
+- ✅ 數據面板（ECharts 折線圖時間序列 + 柱狀圖節點對比 + 實時數值卡片）
+- ✅ 緊湊投遞結果（統計摘要 + 分頁列表，避免大量消息時頁面過長）
 
 ## 8. 監控指標語義
 
@@ -197,13 +203,17 @@ page.tsx → components → hooks → lib/api.ts → 後端 REST/STOMP
 | `EmbeddedRocketMqRuntimeMetricsTest` | 3 | 嵌入式指標測試（1 條件啟用） |
 | `EmbeddedRocketMqSpikeTest` | 1 | 嵌入式 Spike（條件啟用） |
 | `ClusterManagerApplicationTests` | 1 | 應用上下文加載 |
-| **合計** | **128** | **2 條件跳過** |
+| `RateLimitServiceTest` | 20 | 6 種黑盒測試方法覆蓋動態限流計算 |
+| **合計** | **148** | **2 條件跳過** |
 
 ### 嵌入式 RocketMQ 測試
 需要 JVM 模块參數（已在 `pom.xml` Surefire `argLine` 配置）：
 ```
 --add-opens java.base/java.nio=ALL-UNNAMED
+--add-opens java.base/java.lang.reflect=ALL-UNNAMED
 --add-opens java.base/sun.nio.ch=ALL-UNNAMED
+--add-opens java.base/java.lang=ALL-UNNAMED
+--add-opens java.base/java.util=ALL-UNNAMED
 --add-exports java.base/jdk.internal.ref=ALL-UNNAMED
 ```
 
@@ -217,5 +227,8 @@ page.tsx → components → hooks → lib/api.ts → 後端 REST/STOMP
 - **外部 MQ 通信三層後備**：PSEUDO HOST 路徑按優先級查找 NameServer 地址——登記的 HOST 節點 > 運行時 UI 配置 > 啟動環境變量。
 - **運行時配置持久化**：UI 配置保存到 `run/rocketmq-connection.properties`，啟動時自動加載，立即生效無需重啟。
 - **RealRocketMqAdminClient 條件啟用**：`@ConditionalOnProperty(prefix="cluster.rocketmq", name="name-servers")`，配置了 NameServer 地址時自動替代 MockRocketMqAdminClient。
-- **JVM `--add-opens` 參數**：`spring-boot-maven-plugin` 配置了 `--add-opens java.base/java.nio=ALL-UNNAMED` 等 JVM 參數，確保 RocketMQ 4.9.8 在 Java 17 上 `Broker.shutdown()` 時能反射訪問 `DirectByteBuffer.attachment()` 釋放內存映射文件。沒有這些參數，shutdown 會拋 `InaccessibleObjectException`，導致 store lock 文件無法刪除，重啟時 Broker 無法啟動。
+- **JVM `--add-opens` 參數**：`spring-boot-maven-plugin` 配置了 `--add-opens java.base/java.nio=ALL-UNNAMED` 等 JVM 參數，確保 RocketMQ 5.3.3 在 Java 21 上 `Broker.shutdown()` 時能反射訪問 `DirectByteBuffer.attachment()` 釋放內存映射文件。Java 21 模塊系統更嚴格，需要比 Java 17 多打開 `java.lang` 和 `java.util` 模塊。
 - **Broker 重啟延遲**：`EmbeddedRocketMqRuntime.restart()` 在 stop 後等待 1.5 秒再 start，`EmbeddedRocketMqNode.stop()` 在 shutdown 後等待 1 秒確保線程池終止和文件句柄釋放。不等待會導致端口衝突或 store lock 文件佔用。
+- **動態限流公式**：`RateLimitService` 基於多因素綜合公式計算最大消息量：`maxMessages = floor(min(memoryFactor, cpuFactor, diskFactor, ceiling) × 0.7)`。memoryFactor=可用堆MB×50, cpuFactor=邏輯核數×200, diskFactor=可用磁盤GB×100, ceiling=5000。每台機器看到的上限不同。API：`GET /api/clusters/rate-limit`。
+- **數據面板**：`MetricsDashboard` 組件使用 ECharts 展示時間序列折線圖（CPU/內存/TPS 趨勢，30 個採樣點）+ 節點對比柱狀圖 + 實時數值卡片。雙 Y 軸：左軸百分比，右軸 TPS。
+- **緊湊投遞結果**：`DeliveryResults` 組件用統計摘要（總數/成功/失敗/成功率）+ 分頁列表（每頁 10 條）替代逐條展示，避免大量消息時頁面過長。

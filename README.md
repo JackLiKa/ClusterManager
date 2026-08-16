@@ -10,7 +10,7 @@
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.0-6DB33F.svg)](https://spring.io/projects/spring-boot)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev/)
-[![RocketMQ](https://img.shields.io/badge/RocketMQ-4.9.8-D77916.svg)](https://rocketmq.apache.org/)
+[![RocketMQ](https://img.shields.io/badge/RocketMQ-5.3.3-D77916.svg)](https://rocketmq.apache.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6.svg)](https://www.typescriptlang.org/)
 
 </div>
@@ -23,7 +23,7 @@
 
 MQCluster is a local-first learning platform designed for university students and self-learners who want to
 understand RocketMQ cluster topology, message models, and day-to-day operations without provisioning
-infrastructure. The backend embeds a genuine Apache RocketMQ 4.9.8 runtime (in-process NameServer + Broker),
+infrastructure. The backend embeds a genuine Apache RocketMQ 5.3.3 runtime (in-process NameServer + Broker),
 and the Next.js frontend gives you an interactive dashboard with topology visualization, a message workbench,
 and live monitoring metrics.
 
@@ -44,13 +44,16 @@ MQCluster provides an interactive web dashboard for visualizing and operating Ro
 
 ## Features
 
-- **Embedded real RocketMQ** — runs an actual Apache RocketMQ 4.9.8 NameServer + Broker in-process. No fake mocks, no Docker.
+- **Embedded real RocketMQ** — runs an actual Apache RocketMQ 5.3.3 NameServer + Broker in-process. No fake mocks, no Docker.
 - **Topology visualization** — interactive ECharts graph showing NameServer, Master, and Slave nodes and their relationships.
 - **Message simulation** — produce and consume real messages through the embedded broker; watch delivery succeed in real time.
 - **Message templates** — 6 built-in templates (JSON order, plain text, RocketMQ event, key-value, user behavior) with placeholder substitution (`{index}`, `{timestamp}`, `{uuid}`, `{random}`, `{topic}`). Custom templates supported.
 - **External MQ communication** — connect to your local RocketMQ cluster via the web UI configuration panel. Supports PSEUDO mode (HOST node bridge) and REAL mode (real admin client with produce/consume).
 - **Web-based connection config** — configure NameServer addresses, timeouts, and consumer group prefix directly in the browser. Changes take effect immediately and persist across restarts.
 - **Monitoring metrics** — live CPU, memory, and network I/O charts for each node, streamed over STOMP/WebSocket.
+- **Data dashboard** — ECharts time-series line charts (CPU/memory/TPS trends), node comparison bar charts, and real-time metric cards with quantified axes.
+- **Dynamic rate limiting** — automatically calculates a safe maximum message batch size based on your machine's CPU cores, available JVM heap, and disk space. Each user sees a different limit tailored to their hardware.
+- **Compact delivery results** — statistics summary (total/success/fail/success rate) with paginated list, preventing page overflow when sending large batches.
 - **Node lifecycle management** — start, stop, and restart individual nodes; observe cluster state transitions.
 - **Master–Slave replication** — run a Master and Slave simultaneously and see replication in action.
 - **Activity log & audit trail** — every operation is recorded and pushed to the UI in real time via STOMP.
@@ -65,7 +68,7 @@ MQCluster provides an interactive web dashboard for visualizing and operating Ro
 
 | Tool | Version | Notes |
 | --- | --- | --- |
-| Java (JDK) | 17+ | Required for the Spring Boot backend |
+| Java (JDK) | 21+ | Required for the Spring Boot backend |
 | Maven | 3.9+ | Or use the bundled `mvnw` wrapper |
 | Node.js | 20+ | Required for the Next.js frontend |
 | npm | 10+ | Ships with Node.js |

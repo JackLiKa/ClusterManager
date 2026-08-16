@@ -10,12 +10,12 @@
 | 版本 | `0.1.0-SNAPSHOT` |
 | 倉庫 | https://github.com/JackLiKa/MQCluster |
 | 許可證 | Apache 2.0 |
-| 描述 | Spring Boot 4.1.0 後端，嵌入真實 Apache RocketMQ 4.9.8，提供 REST + WebSocket API。 |
+| 描述 | Spring Boot 4.1.0 後端，嵌入真實 Apache RocketMQ 5.3.3，提供 REST + WebSocket API。 |
 
 ### 技術棧
 
-- Java 17、Spring Boot 4.1.0（Web / Validation / WebSocket / Actuator）
-- Apache RocketMQ 4.9.8（嵌入式 NameServer + Broker）
+- Java 21、Spring Boot 4.1.0（Web / Validation / WebSocket / Actuator）
+- Apache RocketMQ 5.3.3（嵌入式 NameServer + Broker）
 - JUnit 5 + AssertJ + Spring Boot Test
 - Maven（wrapper `mvnw`/`mvnw.cmd`）
 
@@ -49,7 +49,7 @@ src/main/java/com/example/clustermanager
 
 ```powershell
 .\mvnw.cmd spring-boot:run          # 開發：http://localhost:8088
-.\mvnw.cmd clean verify             # 完整構建 + 測試（128 tests, 2 skipped）
+.\mvnw.cmd clean verify             # 完整構建 + 測試（148 tests, 2 skipped）
 .\mvnw.cmd clean package            # fat JAR → target/mqcluster-0.1.0-SNAPSHOT.jar
 ```
 
@@ -61,7 +61,7 @@ src/main/java/com/example/clustermanager
 - `--add-opens java.base/sun.nio.ch=ALL-UNNAMED`
 - `--add-exports java.base/jdk.internal.ref=ALL-UNNAMED`
 
-**這些參數是必需的**——RocketMQ 4.9.8 在 Java 17 上 `Broker.shutdown()` 時需要反射訪問 `DirectByteBuffer.attachment()` 釋放內存映射文件。沒有這些參數，shutdown 拋 `InaccessibleObjectException`，store lock 文件無法刪除，重啟時 Broker 無法啟動。
+**這些參數是必需的**——RocketMQ 5.3.3 在 Java 21 上 `Broker.shutdown()` 時需要反射訪問 `DirectByteBuffer.attachment()` 釋放內存映射文件。Java 21 模塊系統更嚴格，需要比 Java 17 多打開 `java.lang` 和 `java.util` 模塊。沒有這些參數，shutdown 拋 `InaccessibleObjectException`，store lock 文件無法刪除，重啟時 Broker 無法啟動。
 
 ## 4. 配置
 
