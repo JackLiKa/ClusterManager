@@ -38,14 +38,14 @@ MQCluster is a **front-end / back-end separated** application:
 │                      │ Next.js rewrites proxy            │
 │  ┌───────────────────▼───────────────────────────────┐  │
 │  │         Spring Boot 4.1.0 Backend (port 8088)     │  │
-│  │  Hexagonal architecture · Embedded RocketMQ 4.9.8 │  │
+│  │  Hexagonal architecture · Embedded RocketMQ 5.3.3 │  │
 │  └───────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────┘
 ```
 
 - The **frontend** is a Next.js 16 application (App Router, React 19, TypeScript strict mode).
   It renders the dashboard, topology graph, message workbench, and monitoring charts.
-- The **backend** is a Spring Boot 4.1.0 application that embeds a real Apache RocketMQ 4.9.8
+- The **backend** is a Spring Boot 4.1.0 application that embeds a real Apache RocketMQ 5.3.3
   runtime and exposes REST + WebSocket endpoints.
 - Communication happens over **REST** (`/api`) for commands and **STOMP over WebSocket** (`/ws`)
   for real-time event streaming.
@@ -129,7 +129,7 @@ This layer implements the core ports with concrete technology. Two adapters exis
 
 | Adapter | Package | Description |
 | --- | --- | --- |
-| **Pseudo (embedded)** | `infrastructure/pseudo` | Runs a real Apache RocketMQ 4.9.8 NameServer + Broker in-process. This is the default learning mode. |
+| **Pseudo (embedded)** | `infrastructure/pseudo` | Runs a real Apache RocketMQ 5.3.3 NameServer + Broker in-process. This is the default learning mode. |
 | **RocketMQ admin** | `infrastructure/rocketmq` | Connects to an external RocketMQ cluster via the RocketMQ admin client. For advanced use. |
 
 The pseudo adapter is the heart of MQCluster — it launches genuine RocketMQ components inside the
@@ -176,7 +176,7 @@ frontend code environment-agnostic.
 
 ## Embedded RocketMQ
 
-The defining feature of MQCluster is that it runs a **real** Apache RocketMQ 4.9.8 runtime
+The defining feature of MQCluster is that it runs a **real** Apache RocketMQ 5.3.3 runtime
 inside the backend JVM — not a mock or a simulator.
 
 ### How it works

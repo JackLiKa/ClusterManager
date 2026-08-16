@@ -86,23 +86,44 @@ npx tsc --noEmit                    # Typecheck
 > ⚠️ **重要**：後端需要 **Java 21**（class file version 65.0）。若 `JAVA_HOME` 指向 Java 17（version 61.0），
 > `spring-boot:run` 會報 `UnsupportedClassVersionError`。啟動前必須確認 JDK 版本。
 > 若 8088/3000 端口被佔用或上次運行殘留了進程/文件，項目會啟動失敗，需先清理。
+>
+> 本項目支持 **Windows、Linux、macOS** 三平台。以下按平台分別給出命令。
 
 #### Step 0：確認 Java 21 可用
+
+**Windows (PowerShell):**
 ```powershell
-# 查看當前 JAVA_HOME（可能指向 Java 17，需切換到 Java 21）
 echo $env:JAVA_HOME
-# 確認 Java 21 路徑存在
-Test-Path "C:\Users\13026\.jdks\ms-21.0.9\bin\java.exe"
+java -version
 ```
 
+**Linux / macOS (Bash/Zsh):**
+```bash
+echo $JAVA_HOME
+java -version
+```
+
+> 若 `java -version` 顯示的版本不是 21.x.x，需先安裝 Java 21 並設置 `JAVA_HOME`（見 Step 3）。
+
 #### Step 1：清理舊進程和端口佔用
+
+**Windows (PowerShell):**
 ```powershell
 Get-NetTCPConnection -LocalPort 8088 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
 Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
 Start-Sleep -Seconds 2
 ```
 
+**Linux / macOS (Bash/Zsh):**
+```bash
+lsof -ti:8088 | xargs kill -9 2>/dev/null
+lsof -ti:3000 | xargs kill -9 2>/dev/null
+sleep 2
+```
+
 #### Step 2：清理運行殘留（可選，遇到啟動失敗時執行）
+
+**Windows (PowerShell):**
 ```powershell
 cd A:\project\Cluster\java
 if (Test-Path run) { Remove-Item -Recurse -Force run }
@@ -111,44 +132,116 @@ cd A:\project\Cluster\next
 if (Test-Path .next) { Remove-Item -Recurse -Force .next }
 ```
 
+**Linux / macOS (Bash/Zsh):**
+```bash
+cd /path/to/Cluster/java
+rm -rf run
+./mvnw clean
+cd /path/to/Cluster/next
+rm -rf .next
+```
+
 #### Step 3：設置 Java 21 環境變量並啟動後端
+
+**Windows (PowerShell) — 當前 session 臨時生效:**
 ```powershell
-$env:JAVA_HOME = "C:\Users\13026\.jdks\ms-21.0.9"
+$env:JAVA_HOME = "C:\Users\<你的用戶名>\.jdks\ms-21.0.9"
 $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
 java -version
 cd A:\project\Cluster\java
 .\mvnw.cmd spring-boot:run
 ```
 
-#### Step 4：啟動前端
+**Windows — 永久生效（只需執行一次）:**
 ```powershell
-# 新開一個終端窗口
+[System.Environment]::SetEnvironmentVariable("JAVA_HOME", "C:\Users\<你的用戶名>\.jdks\ms-21.0.9", "User")
+```
+
+**Linux (Bash) — 當前 session 臨時生效:**
+```bash
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+export PATH=$JAVA_HOME/bin:$PATH
+java -version
+cd /path/to/Cluster/java
+./mvnw spring-boot:run
+```
+
+**Linux — 永久生效（只需執行一次）:**
+```bash
+echo 'export JAVA_HOME=/usr/lib/jvm/java-21-openjdk' >> ~/.bashrc
+source ~/.bashrc
+```
+
+**macOS (Zsh) — 當前 session 臨時生效:**
+```bash
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+export PATH=$JAVA_HOME/bin:$PATH
+java -version
+cd /path/to/Cluster/java
+./mvnw spring-boot:run
+```
+
+**macOS — 永久生效（只需執行一次）:**
+```bash
+echo 'export JAVA_HOME=$(/usr/libexec/java_home -v 21)' >> ~/.zshrc
+source ~/.zshrc
+```
+
+> **Java 21 安裝方式參考**：
+> - Windows: 下載 [Microsoft Build of OpenJDK 21](https://learn.microsoft.com/java/openjdk/) 或 `winget install Microsoft.OpenJDK.21`
+> - Linux (Ubuntu/Debian): `sudo apt install openjdk-21-jdk`
+> - Linux (Fedora/RHEL): `sudo dnf install java-21-openjdk-devel`
+> - macOS (Homebrew): `brew install openjdk@21`
+> - macOS (SDKMAN): `sdk install java 21-tem`
+
+#### Step 4：啟動前端
+
+**Windows (PowerShell):**
+```powershell
 cd A:\project\Cluster\next
 npm run dev
-# 等待看到 "Ready" 日誌，前端在 http://localhost:3000
 ```
+
+**Linux / macOS (Bash/Zsh):**
+```bash
+cd /path/to/Cluster/next
+npm run dev
+```
+
+> 等待看到 "Ready" 日誌，前端在 http://localhost:3000
 
 #### Step 5：驗證啟動成功
+
+**Windows (PowerShell):**
 ```powershell
-# 驗證後端
 Invoke-WebRequest -Uri "http://localhost:8088/api/clusters/providers" -UseBasicParsing
-# 應返回 200 + JSON provider 列表
-
-# 驗證前端
 Invoke-WebRequest -Uri "http://localhost:3000" -UseBasicParsing
-# 應返回 200 + HTML
-
-# 打開瀏覽器訪問 http://localhost:3000
 ```
 
-#### 快速啟動一鍵腳本（端口空閒且 Java 21 已配置時）
+**Linux / macOS (Bash/Zsh):**
+```bash
+curl -s http://localhost:8088/api/clusters/providers
+curl -s -o /dev/null -w "%{http_code}" http://localhost:3000
+```
+
+> 兩個都應返回 200。打開瀏覽器訪問 http://localhost:3000
+
+#### 快速啟動（端口空閒且 Java 21 已配置時）
+
+**Windows (PowerShell):**
 ```powershell
 # 後端（終端 1）
-$env:JAVA_HOME = "C:\Users\13026\.jdks\ms-21.0.9"; $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
 cd A:\project\Cluster\java; .\mvnw.cmd spring-boot:run
-
 # 前端（終端 2）
 cd A:\project\Cluster\next; npm run dev
+```
+
+**Linux / macOS (Bash/Zsh):**
+```bash
+# 後端（終端 1）
+cd /path/to/Cluster/java && ./mvnw spring-boot:run
+# 前端（終端 2）
+cd /path/to/Cluster/next && npm run dev
 ```
 
 ### 嵌入式 RocketMQ JVM 參數
@@ -162,16 +255,20 @@ RocketMQ 5.3.3 嵌入式運行需要 Java 模块訪問權限（Java 21 需要更
 --add-exports java.base/jdk.internal.ref=ALL-UNNAMED
 ```
 
+> 這些參數已在 `pom.xml` 的 `spring-boot-maven-plugin` 和 `surefire` 中配置，三平台通用，無需手動添加。
+
 ### 常見啟動失敗排查
 
 | 症狀 | 原因 | 解決方案 |
 | --- | --- | --- |
-| `UnsupportedClassVersionError: class file version 65.0` | JAVA_HOME 指向 Java 17 | 設置 `$env:JAVA_HOME` 為 Java 21 路徑 |
+| `UnsupportedClassVersionError: class file version 65.0` | JAVA_HOME 指向 Java 17 | 設置 JAVA_HOME 為 Java 21 路徑（見 Step 3） |
 | `Failed to bind to 0.0.0.0:8088` | 8088 端口被佔用 | 執行 Step 1 殺進程 |
 | `Address already in use: bind`（Broker 端口） | 上次 Broker 進程未完全退出 | 殺進程 + 清理 `run/` 目錄 + 等待 2 秒 |
 | `Store lock file occupied` | RocketMQ store 鎖未釋放 | 清理 `java/run/` 目錄 |
 | 前端頁面空白 / API 404 | 後端未啟動或端口不匹配 | 確認後端 8088 已啟動，檢查 `next/.env.local` 的 `BACKEND_URL` |
 | `EADDRINUSE: address already in use 0.0.0.0:3000` | 3000 端口被佔用 | 執行 Step 1 殺進程 |
+| macOS `lsof: command not found` | lsof 未安裝 | `brew install lsof` 或用 `kill $(fuser 8088/tcp)` |
+| Linux `./mvnw: Permission denied` | mvnw 無執行權限 | `chmod +x ./mvnw` |
 
 ## 5. 架構（六邊形 / 端口與適配器）
 

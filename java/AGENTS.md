@@ -60,36 +60,57 @@ src/main/java/com/example/clustermanager
 > `UnsupportedClassVersionError: ... has been compiled by a more recent version of the Java Runtime`。
 > 必須在啟動前設置 `JAVA_HOME` 為 Java 21。
 
+**Windows (PowerShell):**
 ```powershell
-# Step 1: 設置 Java 21
-$env:JAVA_HOME = "C:\Users\13026\.jdks\ms-21.0.9"
+$env:JAVA_HOME = "C:\Users\<你的用戶名>\.jdks\ms-21.0.9"
 $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
 java -version
-
-# Step 2: 殺掉佔用 8088 端口的舊進程
 Get-NetTCPConnection -LocalPort 8088 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
 Start-Sleep -Seconds 2
-
-# Step 3: 清理運行殘留（遇到 Broker 端口衝突或 store lock 錯誤時執行）
 cd A:\project\Cluster\java
 if (Test-Path run) { Remove-Item -Recurse -Force run }
 .\mvnw.cmd clean
-
-# Step 4: 啟動後端
 .\mvnw.cmd spring-boot:run
-
-# Step 5: 驗證
 Invoke-WebRequest -Uri "http://localhost:8088/api/clusters/providers" -UseBasicParsing
+```
+
+**Linux (Bash):**
+```bash
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+export PATH=$JAVA_HOME/bin:$PATH
+java -version
+lsof -ti:8088 | xargs kill -9 2>/dev/null
+sleep 2
+cd /path/to/Cluster/java
+rm -rf run
+./mvnw clean
+./mvnw spring-boot:run
+curl -s http://localhost:8088/api/clusters/providers
+```
+
+**macOS (Zsh):**
+```bash
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+export PATH=$JAVA_HOME/bin:$PATH
+java -version
+lsof -ti:8088 | xargs kill -9 2>/dev/null
+sleep 2
+cd /path/to/Cluster/java
+rm -rf run
+./mvnw clean
+./mvnw spring-boot:run
+curl -s http://localhost:8088/api/clusters/providers
 ```
 
 ### 常見啟動失敗排查
 
 | 症狀 | 原因 | 解決方案 |
 | --- | --- | --- |
-| `UnsupportedClassVersionError (class file version 65.0)` | JAVA_HOME 指向 Java 17 | `$env:JAVA_HOME = "C:\Users\13026\.jdks\ms-21.0.9"` |
-| `Failed to bind to 0.0.0.0:8088` | 8088 端口被佔用 | 殺進程：`Get-NetTCPConnection -LocalPort 8088` → `Stop-Process` |
-| `Address already in use: bind`（Broker 端口） | 上次 Broker 進程未完全退出 | 殺進程 + `Remove-Item -Recurse -Force run` + 等待 2 秒 |
-| `Store lock file occupied` | RocketMQ store 鎖未釋放 | `Remove-Item -Recurse -Force run` |
+| `UnsupportedClassVersionError (class file version 65.0)` | JAVA_HOME 指向 Java 17 | 設置 JAVA_HOME 為 Java 21 路徑（見上方命令） |
+| `Failed to bind to 0.0.0.0:8088` | 8088 端口被佔用 | Windows: `Get-NetTCPConnection -LocalPort 8088` → `Stop-Process`；Linux/macOS: `lsof -ti:8088 | xargs kill -9` |
+| `Address already in use: bind`（Broker 端口） | 上次 Broker 進程未完全退出 | 殺進程 + `rm -rf run`（Linux/macOS）/ `Remove-Item -Recurse -Force run`（Windows）+ 等待 2 秒 |
+| `Store lock file occupied` | RocketMQ store 鎖未釋放 | 清理 `run/` 目錄 |
+| Linux `./mvnw: Permission denied` | mvnw 無執行權限 | `chmod +x ./mvnw` |
 
 ### JVM 參數（重要）
 

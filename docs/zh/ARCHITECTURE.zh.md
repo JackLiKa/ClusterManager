@@ -37,13 +37,13 @@ MQCluster 是一個**前後端分離**的應用：
 │                      │ Next.js rewrites 代理              │
 │  ┌───────────────────▼───────────────────────────────┐  │
 │  │         Spring Boot 4.1.0 後端（端口 8088）        │  │
-│  │  六邊形架構 · 嵌入式 RocketMQ 4.9.8                │  │
+│  │  六邊形架構 · 嵌入式 RocketMQ 5.3.3                │  │
 │  └───────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────┘
 ```
 
 - **前端**是 Next.js 16 應用（App Router、React 19、TypeScript 嚴格模式），渲染儀表盤、拓撲圖、消息工作台和監控圖表。
-- **後端**是 Spring Boot 4.1.0 應用，嵌入真實 Apache RocketMQ 4.9.8 運行時，提供 REST + WebSocket 端點。
+- **後端**是 Spring Boot 4.1.0 應用，嵌入真實 Apache RocketMQ 5.3.3 運行時，提供 REST + WebSocket 端點。
 - 通信通過 **REST**（`/api`）發送命令，通過 **STOMP over WebSocket**（`/ws`）接收實時事件流。
 
 ---
@@ -115,7 +115,7 @@ MQCluster 是一個**前後端分離**的應用：
 
 | 適配器 | 包 | 描述 |
 | --- | --- | --- |
-| **Pseudo（嵌入式）** | `infrastructure/pseudo` | 進程內運行真實 Apache RocketMQ 4.9.8 NameServer + Broker。默認學習模式。 |
+| **Pseudo（嵌入式）** | `infrastructure/pseudo` | 進程內運行真實 Apache RocketMQ 5.3.3 NameServer + Broker。默認學習模式。 |
 | **RocketMQ admin** | `infrastructure/rocketmq` | 通過 RocketMQ admin 客戶端連接外部 RocketMQ 集群。進階用途。 |
 
 Pseudo 適配器是 MQCluster 的核心——它在 JVM 內啟動真實 RocketMQ 組件，學習者與真實 broker 交互，而非模擬。
@@ -159,7 +159,7 @@ page.tsx  ──▶  components  ──▶  hooks  ──▶  lib/api.ts  ──
 
 ## 嵌入式 RocketMQ
 
-MQCluster 的標誌性特徵是在後端 JVM 內運行**真實** Apache RocketMQ 4.9.8 運行時——不是 mock 或模擬器。
+MQCluster 的標誌性特徵是在後端 JVM 內運行**真實** Apache RocketMQ 5.3.3 運行時——不是 mock 或模擬器。
 
 ### 工作原理
 

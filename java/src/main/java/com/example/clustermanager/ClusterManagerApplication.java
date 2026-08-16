@@ -35,8 +35,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  *
  * <p><b>启动方式</b>：
  * <ul>
- *   <li>开发环境：{@code mvnw.cmd spring-boot:run}（http://localhost:8080）</li>
- *   <li>生产打包：{@code mvnw.cmd clean package} 生成 fat JAR 后
+ *   <li>开发环境：{@code ./mvnw spring-boot:run}（Linux/macOS）或 {@code mvnw.cmd spring-boot:run}（Windows），http://localhost:8088</li>
+ *   <li>生产打包：{@code ./mvnw clean package} 生成 fat JAR 后
  *       {@code java -jar target/mqcluster-0.1.0-SNAPSHOT.jar}</li>
  * </ul>
  */

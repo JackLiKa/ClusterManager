@@ -64,6 +64,9 @@ MQCluster provides an interactive web dashboard for visualizing and operating Ro
 
 ## Quick Start
 
+> MQCluster runs on **Windows**, **Linux**, and **macOS**. The codebase is fully cross-platform —
+> only the terminal commands differ slightly.
+
 ### Prerequisites
 
 | Tool | Version | Notes |
@@ -73,14 +76,41 @@ MQCluster provides an interactive web dashboard for visualizing and operating Ro
 | Node.js | 20+ | Required for the Next.js frontend |
 | npm | 10+ | Ships with Node.js |
 
+<details>
+<summary><b>Java 21 installation guide (click to expand)</b></summary>
+
+| OS | Command |
+| --- | --- |
+| Windows | `winget install Microsoft.OpenJDK.21` or download from [Microsoft OpenJDK](https://learn.microsoft.com/java/openjdk/) |
+| Linux (Ubuntu/Debian) | `sudo apt install openjdk-21-jdk` |
+| Linux (Fedora/RHEL) | `sudo dnf install java-21-openjdk-devel` |
+| macOS (Homebrew) | `brew install openjdk@21` |
+| macOS (SDKMAN) | `sdk install java 21-tem` |
+
+Verify: `java -version` should show `21.x.x`.
+</details>
+
 ### 1. Start the backend
 
+**Linux / macOS:**
 ```bash
 cd java
-./mvnw spring-boot:run        # Windows: .\mvnw.cmd spring-boot:run
+./mvnw spring-boot:run
+```
+
+**Windows (PowerShell):**
+```powershell
+cd java
+.\mvnw.cmd spring-boot:run
 ```
 
 The backend starts on **http://localhost:8088**.
+
+> **Troubleshooting**: If you see `UnsupportedClassVersionError: class file version 65.0`,
+> your `JAVA_HOME` points to Java 17. Set it to Java 21:
+> - **Windows**: `$env:JAVA_HOME = "C:\Path\To\jdk-21"`
+> - **Linux**: `export JAVA_HOME=/usr/lib/jvm/java-21-openjdk`
+> - **macOS**: `export JAVA_HOME=$(/usr/libexec/java_home -v 21)`
 
 ### 2. Start the frontend
 
@@ -96,6 +126,20 @@ The frontend starts on **http://localhost:3000** and proxies `/api` and `/ws` re
 
 Navigate to **http://localhost:3000** — you'll see the MQCluster dashboard with a 3-node topology
 (NameServer + Master + Slave), all initially stopped. Click **Start** on any node to bring it to life.
+
+<details>
+<summary><b>Having startup issues? (click to expand)</b></summary>
+
+| Symptom | Solution |
+| --- | --- |
+| Port 8088 already in use | **Windows**: `Get-NetTCPConnection -LocalPort 8088 \| ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }`<br>**Linux/macOS**: `lsof -ti:8088 \| xargs kill -9` |
+| Port 3000 already in use | **Windows**: `Get-NetTCPConnection -LocalPort 3000 \| ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }`<br>**Linux/macOS**: `lsof -ti:3000 \| xargs kill -9` |
+| Broker won't start (store lock) | Delete `java/run/` directory and restart |
+| `./mvnw: Permission denied` (Linux/macOS) | `chmod +x ./mvnw` |
+| Frontend blank page | Ensure backend is running on 8088 first |
+
+For full startup guide with cleanup steps, see [AGENTS.md](AGENTS.md#4-構建運行測試).
+</details>
 
 ---
 
