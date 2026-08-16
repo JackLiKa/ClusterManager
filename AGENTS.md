@@ -57,7 +57,7 @@ MQCluster/
 - Next.js 16（App Router）+ React 19
 - TypeScript（嚴格模式）
 - Tailwind CSS v4 + shadcn/ui
-- ECharts 5（拓撲可視化）
+- ECharts 6（拓撲可視化）
 - axios（HTTP 客戶端）
 - @stomp/stompjs + sockjs-client（WebSocket 實時推送）
 

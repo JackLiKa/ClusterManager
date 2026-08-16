@@ -307,7 +307,7 @@ public class EmbeddedRocketMqRuntime {
             if (statsManager == null) {
                 return 0.0;
             }
-            // RocketMQ 4.9.8 的 BROKER_PUT_NUMS/BROKER_GET_NUMS 統計項以 brokerClusterName 為 key
+            // RocketMQ 5.3.3 的 BROKER_PUT_NUMS/BROKER_GET_NUMS 統計項以 brokerClusterName 為 key
             //（實測日誌：[BROKER_PUT_NUMS] [embedded-cluster]），而非 brokerName。
             String statsKey = node.spec().brokerClusterName();
             if (statsKey == null) {

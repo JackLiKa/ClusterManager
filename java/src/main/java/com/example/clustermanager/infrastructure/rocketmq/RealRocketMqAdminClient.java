@@ -30,7 +30,7 @@ import org.springframework.stereotype.Component;
  * <p>當 {@code cluster.rocketmq.name-servers} 配置了有效地址時啟用（替代 {@link MockRocketMqAdminClient}）。
  * 支持真實的 produce/consume 操作，用於與本地 MQ 項目通信。
  *
- * <p><b>節點/鏈路拉取</b>：當前使用簡化實現（返回空列表），因為 RocketMQ 4.9.8 的
+ * <p><b>節點/鏈路拉取</b>：當前使用簡化實現（返回空列表），因為 RocketMQ 5.3.3 的
  * Admin API（DefaultMQAdminExt）需要額外的認證配置。拓撲信息主要通過手工登記節點獲取。
  *
  * <p><b>消息收發</b>：使用 {@link DefaultMQProducer} 和 {@link DefaultMQPushConsumer}

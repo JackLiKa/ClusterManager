@@ -31,7 +31,7 @@ MQCluster 是一個**前後端分離**的應用：
 │                                                         │
 │  ┌───────────────────────────────────────────────────┐  │
 │  │            Next.js 16 前端（端口 3000）            │  │
-│  │  React 19 · Tailwind v4 · ECharts 5 · STOMP       │  │
+│  │  React 19 · Tailwind v4 · ECharts 6 · STOMP       │  │
 │  └───────────────────┬───────────────────────────────┘  │
 │                      │ /api（REST）  /ws（STOMP）        │
 │                      │ Next.js rewrites 代理              │

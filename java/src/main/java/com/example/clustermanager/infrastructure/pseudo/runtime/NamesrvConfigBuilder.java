@@ -4,7 +4,7 @@ import org.apache.rocketmq.common.namesrv.NamesrvConfig;
 import org.apache.rocketmq.remoting.netty.NettyServerConfig;
 
 /**
- * NameServer 配置構建器——從 {@link EmbeddedNodeSpec} 構建 RocketMQ 4.9.8 NameServer 所需配置對象。
+ * NameServer 配置構建器——從 {@link EmbeddedNodeSpec} 構建 RocketMQ 5.3.3 NameServer 所需配置對象。
  *
  * <p>工具類，所有方法為靜態，私有構造器防止實例化。
  * 被 {@link EmbeddedRocketMqNode#nameserver} 調用。

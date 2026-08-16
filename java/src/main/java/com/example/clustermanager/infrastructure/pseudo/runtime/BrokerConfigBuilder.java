@@ -6,7 +6,7 @@ import org.apache.rocketmq.remoting.netty.NettyServerConfig;
 import org.apache.rocketmq.store.config.MessageStoreConfig;
 
 /**
- * Broker 配置構建器——從 {@link EmbeddedNodeSpec} 構建 RocketMQ 4.9.8 Broker 所需的四個配置對象。
+ * Broker 配置構建器——從 {@link EmbeddedNodeSpec} 構建 RocketMQ 5.3.3 Broker 所需的四個配置對象。
  *
  * <p>工具類，所有方法為靜態，私有構造器防止實例化。
  * 被 {@link EmbeddedRocketMqNode#broker} 調用，構建 {@code BrokerController} 的四參構造參數。

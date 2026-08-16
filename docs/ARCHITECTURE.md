@@ -32,7 +32,7 @@ MQCluster is a **front-end / back-end separated** application:
 │                                                         │
 │  ┌───────────────────────────────────────────────────┐  │
 │  │            Next.js 16 Frontend (port 3000)        │  │
-│  │  React 19 · Tailwind v4 · ECharts 5 · STOMP       │  │
+│  │  React 19 · Tailwind v4 · ECharts 6 · STOMP       │  │
 │  └───────────────────┬───────────────────────────────┘  │
 │                      │ /api (REST)  /ws (STOMP)         │
 │                      │ Next.js rewrites proxy            │

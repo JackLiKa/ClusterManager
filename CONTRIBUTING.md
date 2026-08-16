@@ -66,7 +66,7 @@ Have an idea that would make MQCluster better?
 
 | Tool | Version |
 | --- | --- |
-| JDK | 17+ |
+| JDK | 21+ |
 | Maven | 3.9+ (or use the bundled wrapper) |
 | Node.js | 20+ |
 | npm | 10+ |
